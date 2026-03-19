@@ -1,6 +1,6 @@
 {
   "name": "hof-genesys-chat-component",
-  "version": "1.0.10",
+  "version": "1.0.11",
   "private": true,
   "description": "Reusable Genesys chat component library with GDS styling for Home Office services",
   "main": "dist/index.cjs",
@@ -31,6 +31,7 @@
   "license": "MIT",
   "dependencies": {
     "react-markdown": "^10.1.0",
+    "remark-breaks": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "unist-util-visit": "^5.1.0",
     "uuid": "13.0.0"
