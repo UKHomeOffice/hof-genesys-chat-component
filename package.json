@@ -1,0 +1,72 @@
+{
+  "name": "hof-genesys-chat-component",
+  "version": "1.0.2",
+  "private": true,
+  "description": "Reusable Genesys chat component library with GDS styling for Home Office services",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "rm -rf dist && rollup -c",
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "test": "TZ=UTC jest --coverage"
+  },
+  "keywords": [
+    "genesys",
+    "chat",
+    "messaging",
+    "gds",
+    "home-office"
+  ],
+  "author": "Home Office",
+  "license": "MIT",
+  "dependencies": {
+    "marked": "16.1.2",
+    "uuid": "13.0.0"
+  },
+  "peerDependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "^7.7.0"
+  },
+  "devDependencies": {
+    "@babel/core": "7.28.0",
+    "@babel/preset-env": "7.29.0",
+    "@babel/preset-react": "7.27.1",
+    "@rollup/plugin-commonjs": "25.0.0",
+    "@rollup/plugin-node-resolve": "15.0.0",
+    "@rollup/plugin-replace": "^5.0.5",
+    "@testing-library/dom": "10.4.0",
+    "@testing-library/jest-dom": "6.6.3",
+    "@testing-library/react": "16.3.0",
+    "@testing-library/user-event": "14.6.1",
+    "babel-jest": "30.0.5",
+    "esbuild": "^0.27.4",
+    "eslint": "9.36.0",
+    "identity-obj-proxy": "3.0.0",
+    "jest": "30.0.5",
+    "jest-axe": "10.0.0",
+    "jest-environment-jsdom": "30.0.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-router": "7.7.0",
+    "rollup": "4.0.0",
+    "rollup-plugin-esbuild": "^6.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/UKHomeOffice/hof-genesys-chat-component.git"
+  },
+  "bugs": {
+    "url": "https://github.com/UKHomeOffice/hof-genesys-chat-component/issues"
+  }
+}
