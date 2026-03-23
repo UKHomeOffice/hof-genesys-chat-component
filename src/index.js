@@ -22,7 +22,7 @@ export {
   setAgentDisconnectedBanner,
   setOfflineBanner,
   setReconnectedBanner
-} from './utils/agent-utils';
+} from './utils/genesys-agent';
 
 export {
   setHideContentProperty,
@@ -34,6 +34,5 @@ export {
 
 export {
   getConversationId,
-  setConversationId,
   removeConversationId
-} from './utils/conversation-storage';
+} from './conversation/conversation-storage';
