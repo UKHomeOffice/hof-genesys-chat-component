@@ -1,7 +1,7 @@
 import {
   getConversationId,
   removeConversationId
-} from '../utils/conversation-storage';
+} from '../conversation/conversation-storage';
 
 /**
  * Genesys Service class for managing chat interactions

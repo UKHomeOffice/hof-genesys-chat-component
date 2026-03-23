@@ -7,13 +7,14 @@ import { v4 as uuidv4 } from 'uuid';
  * but will be unique for each new session.
  * @returns {string} conversationId - unique conversation identifier
  */
-let conversationId = sessionStorage.getItem('conversationId');
-if (!conversationId) {
-  conversationId = uuidv4();
-  sessionStorage.setItem('conversationId', conversationId);
-}
-
-export const getConversationId = () => conversationId;
+export const getConversationId = () => {
+  let conversationId = sessionStorage.getItem('conversationId');
+  if (!conversationId) {
+    conversationId = uuidv4();
+    sessionStorage.setItem('conversationId', conversationId);
+  }
+  return conversationId;
+};
 
 export function removeConversationId() {
   sessionStorage.removeItem('conversationId');

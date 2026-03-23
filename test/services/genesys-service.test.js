@@ -1,13 +1,13 @@
 import { GenesysService } from '../../src/services/genesys-service';
 
-jest.mock('../../src/utils/conversation-storage', () => ({
+jest.mock('../../src/conversation/conversation-storage', () => ({
   getConversationId: jest.fn(() => 'conv-123'),
   removeConversationId: jest.fn(),
 }));
 
 import { 
   removeConversationId
-} from '../../src/utils/conversation-storage';
+} from '../../src/conversation/conversation-storage';
 
 /**
  * A robust in-memory mock of the Genesys global function.
