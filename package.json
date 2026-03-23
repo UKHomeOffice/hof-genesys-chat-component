@@ -1,6 +1,6 @@
 {
   "name": "hof-genesys-chat-component",
-  "version": "1.0.19",
+  "version": "0.0.1",
   "private": true,
   "description": "Reusable Genesys chat component library with GDS styling for Home Office services",
   "main": "dist/index.cjs",
