@@ -1,0 +1,34 @@
+[
+  {
+    "text": "Did this answer your question?",
+    "type": "Structured",
+    "direction": "Outbound",
+    "id": "9f32110f2ce702a0d2f8aa29b049ab1a",
+    "channel": {
+      "time": "2025-08-14T17:35:57.383Z",
+      "type": "Private",
+      "from": {},
+      "to": {}
+    },
+    "content": [
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "text": "Yes",
+          "payload": "Yes",
+          "action": "Message"
+        }
+      },
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "text": "No",
+          "payload": "No",
+          "action": "Message"
+        }
+      }
+    ],
+    "metadata": {},
+    "originatingEntity": "Bot"
+  }
+]
