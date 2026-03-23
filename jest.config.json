@@ -2,6 +2,10 @@
   "testEnvironment": "jsdom",
   "verbose": true,
   "collectCoverage": true,
+  "coveragePathIgnorePatterns": [
+        "node_modules",
+        "test/helpers/*"     
+    ],
   "moduleNameMapper": {
     "^url:.*\\.(png|jpg|jpeg|gif|svg)$": "<rootDir>/__mocks__/fileMock.js",
     "^.+\\.(css|scss)$": "identity-obj-proxy"
