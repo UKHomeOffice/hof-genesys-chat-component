@@ -1,6 +1,7 @@
 ---
 kind: pipeline
 name: Build Library
+type: kubernetes
 
 platform:
   os: linux
