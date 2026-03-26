@@ -1,7 +1,7 @@
 // Common predicate for identifying a structured outbound message with content
 const isStructuredOutbound = (msg) =>
-  msg?.direction === "Outbound" &&
-  msg?.type === "Structured" &&
+  msg?.direction === 'Outbound' &&
+  msg?.type === 'Structured' &&
   Boolean(msg?.content);
 
 // Set hideContent on ALL structured outbound messages (produces new array)
@@ -18,7 +18,7 @@ const getStructureMessageIndex = (messages) => {
     .map((message, index) => ({ message, index }))
     .reverse()
     .find(({ message }) => isStructuredOutbound(message))?.index ?? -1;
-}
+};
 
 // Set hideContent on a specific message index (returns new array)
 const setHideContentPropertyWithIndex = (messageIndex, prevMessages, boolValue) => {
@@ -27,10 +27,10 @@ const setHideContentPropertyWithIndex = (messageIndex, prevMessages, boolValue) 
       ? {
         ...message,
         hideContent: boolValue,
-        }
+      }
       : message
   );
-}
+};
 
 // Mutates messages by setting hideContent=true on all matching messages
 const setPreviousStructureHideTrue = (prevMessages) => {

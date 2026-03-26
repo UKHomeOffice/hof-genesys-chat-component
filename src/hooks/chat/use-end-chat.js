@@ -1,5 +1,5 @@
-import { useCallback } from "react";
-import { genesysService } from "../../services/genesys-service";
+import { useCallback } from 'react';
+import { genesysService } from '../../services/genesys-service';
 
 export function useEndChat({ setShowEndChatModal, serviceName, onChatEnded, localStorageKey }) {
   const handleEndChat = useCallback((e) => {

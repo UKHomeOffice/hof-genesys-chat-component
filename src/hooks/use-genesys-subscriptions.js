@@ -224,7 +224,7 @@ export function useGenesysSubscriptions({
             return [...safePrevious];
           }
         });
-      }
+      };
       genesysService.subscribeAgentTyping(onAgentTyping);
       genesysService.unSubscribeAgentTyping(() => setAgentIsTyping(false));
     }

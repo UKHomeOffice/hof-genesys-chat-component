@@ -1,7 +1,7 @@
-import { useSendMessage } from "./use-send-message";
-import { useQuickReply } from "./use-quick-reply";
-import { useEndChat } from "./use-end-chat";
-import { useFetchMessageHistory } from "./use-message-history";
+import { useSendMessage } from './use-send-message';
+import { useQuickReply } from './use-quick-reply';
+import { useEndChat } from './use-end-chat';
+import { useFetchMessageHistory } from './use-message-history';
 
 /**
  * Custom hook for chat actions

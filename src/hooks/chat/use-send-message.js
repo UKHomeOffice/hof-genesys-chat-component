@@ -1,6 +1,6 @@
-import { useCallback } from "react";
-import { genesysService } from "../../services/genesys-service";
-import { setHideContentPropertyWithIndex } from "../../utils/structured-message";
+import { useCallback } from 'react';
+import { genesysService } from '../../services/genesys-service';
+import { setHideContentPropertyWithIndex } from '../../utils/structured-message';
 
 export function useSendMessage({ userInput, setUserInput, messageIndex, setMessages, setIsErrorState }) {
   const sendToGenesys = useCallback(() => {
