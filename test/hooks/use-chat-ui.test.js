@@ -1,11 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
-import { useChatActions } from '../../src/hooks/use-chat-actions';
+import { useChatActions } from '../../src/hooks/chat/use-chat-actions';
+import { genesysService } from '../../src/services/genesys-service';
+import { setHideContentPropertyWithIndex } from '../../src/utils/structured-message';
 
 jest.mock('../../src/services/genesys-service', () => ({
   genesysService: {
     sendMessageToGenesys: jest.fn(),
-    fetchMessageHistory: jest.fn(),
     clearConversation: jest.fn(),
+    fetchMessageHistory: jest.fn(),
     log: jest.fn(),
   },
 }));
@@ -15,9 +17,6 @@ jest.mock('../../src/utils/structured-message', () => ({
     return [{ placeholder: true, index, prev, value }];
   }),
 }));
-
-import { genesysService } from '../../src/services/genesys-service';
-import { setHideContentPropertyWithIndex } from '../../src/utils/structured-message';
 
 describe('useChatActions', () => {
   const createParams = (overrides = {}) => {
@@ -38,17 +37,6 @@ describe('useChatActions', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-  });
-
-  test('handleSetInputMessage sets input correctly', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useChatActions(params));
-
-    act(() => {
-      result.current.handleSetInputMessage('hello');
-    });
-
-    expect(params.setUserInput).toHaveBeenCalledWith('hello');
   });
 
   test('handleQuickReply sends message via Genesys', () => {

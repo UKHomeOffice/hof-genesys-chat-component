@@ -40,6 +40,7 @@ export default function ChatForm({
             aria-describedby="message-input"
             className={`govuk-textarea ${isDisable ? 'govuk-textarea--error' : null}`}
             rows="5"
+            maxLength={maxCharacterLimit}
             disabled={isOffline}
           />
         </div>

@@ -1,23 +1,19 @@
 import MessageMetaData from '../message-meta';
 import MessageText from '../message-text';
-import { formatDate } from '../../../utils/index';
+import MessageWrapper from '../delegates/message-wrapper';
 
-export default function InboundTextMessage({ message }) {
-  const formattedTime = formatDate(message.channel.time);
+export default function InboundMessage({ message, isLast, lastMessageRef }) {
+  const timestamp = message.channel?.time || message.timestamp;
   return (
-    <div className='inbound-message-wrapper'
-      role="article"
-      aria-label="Inbound message"
-      data-testid="inbound-message">
-
-      <MessageText
-        messageType='Inbound'
-        text={message.text} />
-      <MessageMetaData
-        metaDataType='Inbound'
-        messageTimeStamp={formattedTime}
-        metaDisplay='You'
-      />
-    </div>
+    <MessageWrapper isLast={isLast} lastMessageRef={lastMessageRef}>
+      <div className="inbound-message-wrapper"
+        role="article"
+        aria-label="Inbound message"
+        data-testid="inbound-message-wrapper"
+        ref={isLast ? lastMessageRef : null}>
+        <MessageText type='Inbound' text={message.text} />
+        <MessageMetaData type='Inbound' messageTimeStamp={timestamp} metaDisplay='You' />
+      </div>
+    </MessageWrapper>
   );
 }

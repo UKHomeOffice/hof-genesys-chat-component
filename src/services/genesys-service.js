@@ -174,7 +174,6 @@ export class GenesysService {
   /* eslint-enable max-len */
   subscribeToGenesysMessages(callback) {
     globalThis.Genesys('subscribe', 'MessagingService.messagesReceived', ({ data }) => {
-      console.log(data.messages);
       callback(data.messages);
     });
   }

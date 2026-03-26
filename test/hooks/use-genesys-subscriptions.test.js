@@ -1,6 +1,3 @@
-import { renderHook, act } from '@testing-library/react';
-import { useGenesysSubscriptions } from '../../src/hooks/use-genesys-subscriptions';
-
 jest.useFakeTimers();
 
 // ---- Mocks: services ----
@@ -20,6 +17,7 @@ jest.mock('../../src/services/genesys-service', () => ({
 // ---- Mocks: message-utils ----
 jest.mock('../../src/utils/message-utils', () => ({
   clearAgentTypingOnOutboundHumanMessage: jest.fn(),
+  mapHistoricalMessagesToStandardMessageFormat: jest.fn(msgs => msgs),
   checkChatEnded: jest.fn(),
 }));
 
@@ -40,6 +38,8 @@ jest.mock('../../src/utils/structured-message', () => ({
   setHideContentToHistoricalMessages: jest.fn(msgs => msgs.map(m => ({ ...m, historical: true }))),
 }));
 
+import { renderHook, act } from '@testing-library/react';
+import { useGenesysSubscriptions } from '../../src/hooks/use-genesys-subscriptions';
 import { genesysService } from '../../src/services/genesys-service';
 import { clearAgentTypingOnOutboundHumanMessage, checkChatEnded } from '../../src/utils/message-utils';
 import {
@@ -63,7 +63,6 @@ describe('useGenesysSubscriptions', () => {
     setHistoricalMessages: jest.fn(fn => fn([])),
     setShouldScrollToLatestMessage: jest.fn(),
     setAgentIsTyping: jest.fn(),
-    setAgentName: jest.fn(),
     setMessageIndex: jest.fn(),
     setAllHistoryFetched: jest.fn(),
     setIsOffline: jest.fn(),
@@ -74,6 +73,7 @@ describe('useGenesysSubscriptions', () => {
     onlineText: 'Back online',
     mergeChatHistory: jest.fn(),
     hasReconnectedRef: { current: false },
+    setLastHistoryBatchCount: jest.fn(),
     ...overrides,
   });
 
@@ -81,10 +81,10 @@ describe('useGenesysSubscriptions', () => {
     jest.clearAllMocks();
   });
 
-  test('when not ready: no Genesys subscriptions except typing setup', () => {
-    const p = baseParams({ genesysIsReady: false });
+  test('when not ready: no Genesys subscriptions', () => {
+    const params = baseParams({ genesysIsReady: false });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     expect(genesysService.subscribeToGenesysMessages).not.toHaveBeenCalled();
     expect(genesysService.subscribeToGenesysOffline).not.toHaveBeenCalled();
@@ -92,26 +92,24 @@ describe('useGenesysSubscriptions', () => {
     expect(genesysService.subscribeToGenesysOldMessages).not.toHaveBeenCalled();
     expect(genesysService.subscribeToSessionRestored).not.toHaveBeenCalled();
     expect(genesysService.subscribeToErrors).not.toHaveBeenCalled();
-
-    // typing subscriptions are registered regardless of ready flag
-    expect(genesysService.subscribeAgentTyping).toHaveBeenCalledTimes(1);
-    expect(genesysService.unSubscribeAgentTyping).toHaveBeenCalledTimes(1);
+    expect(genesysService.subscribeAgentTyping).not.toHaveBeenCalled();
+    expect(genesysService.unSubscribeAgentTyping).not.toHaveBeenCalled();
   });
 
   test('messages subscription merges, sets indices, agent name, scroll flag, and clears typing', () => {
-    const p = baseParams({ genesysIsReady: true });
+    const params = baseParams({ genesysIsReady: true });
     getCurrentAgentName.mockReturnValue('Agent Smith');
     checkChatEnded.mockReturnValue(false);
 
     let onMessages;
-    genesysService.subscribeToGenesysMessages.mockImplementation(cb => {
-      onMessages = cb;
+    genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
+      onMessages = callback;
     });
 
     // Make clearAgentTyping call the provided "stop typing" callback immediately
     clearAgentTypingOnOutboundHumanMessage.mockImplementation((msg, stopCb) => stopCb());
 
-    const { rerender } = renderHook(() => useGenesysSubscriptions(p));
+    const { rerender } = renderHook(() => useGenesysSubscriptions(params));
 
     // simulate incoming messages
     const newMessages = [{ id: 'm1' }, { id: 'm2' }];
@@ -120,37 +118,35 @@ describe('useGenesysSubscriptions', () => {
     });
 
     // scroll & agent name
-    expect(p.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
-    expect(getCurrentAgentName).toHaveBeenCalledWith(newMessages[0]);
-    expect(p.setAgentName).toHaveBeenCalledWith('Agent Smith');
+    expect(params.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
 
     // setMessages flow
     expect(setPreviousStructureHideTrue).toHaveBeenCalledWith([]);
     expect(setHideContentProperty).toHaveBeenCalledWith(newMessages, false);
     expect(getStructureMessageIndex).toHaveBeenCalledWith(expect.any(Array));
-    expect(p.setMessageIndex).toHaveBeenCalledWith(5);
+    expect(params.setMessageIndex).toHaveBeenCalledWith(5);
 
     // no chat-ended banner when checkChatEnded false
     expect(checkChatEnded).toHaveBeenCalled();
     expect(setAgentDisconnectedBanner).not.toHaveBeenCalled();
 
     // typing clear callback executed
-    expect(p.setAgentIsTyping).toHaveBeenCalledWith(false);
+    expect(params.setAgentIsTyping).toHaveBeenCalledWith(false);
 
     rerender(); // ensure no extra calls beyond registered ones
   });
 
   test('messages subscription adds disconnected banner when chat has ended', () => {
-    const p = baseParams({ genesysIsReady: true });
+    const params = baseParams({ genesysIsReady: true });
     getCurrentAgentName.mockReturnValue('Agent Jane');
     checkChatEnded.mockReturnValue(true);
 
     let onMessages;
-    genesysService.subscribeToGenesysMessages.mockImplementation(cb => {
-      onMessages = cb;
+    genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
+      onMessages = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     const newMessages = [{ id: 'mX' }];
     act(() => {
@@ -162,40 +158,40 @@ describe('useGenesysSubscriptions', () => {
   });
 
   test('offline subscription sets offline state and adds offline banner', () => {
-    const p = baseParams({ genesysIsReady: true });
+    const params = baseParams({ genesysIsReady: true });
 
     let onOffline;
-    genesysService.subscribeToGenesysOffline.mockImplementation(cb => {
-      onOffline = cb;
+    genesysService.subscribeToGenesysOffline.mockImplementation(callback => {
+      onOffline = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     act(() => {
       onOffline();
     });
 
-    expect(p.setIsOffline).toHaveBeenCalledWith(true);
-    expect(p.setMessages).toHaveBeenCalled();
+    expect(params.setIsOffline).toHaveBeenCalledWith(true);
+    expect(params.setMessages).toHaveBeenCalled();
     expect(setOfflineBanner).toHaveBeenCalledWith(expect.any(Array), 'You are offline');
   });
 
   test('reconnected subscription flips flag, sets online, and schedules reconnected banner', () => {
-    const p = baseParams({ genesysIsReady: true });
+    const params = baseParams({ genesysIsReady: true });
 
     let onReconnected;
-    genesysService.subscribeToGenesysReconnected.mockImplementation(cb => {
-      onReconnected = cb;
+    genesysService.subscribeToGenesysReconnected.mockImplementation(callback => {
+      onReconnected = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     act(() => {
       onReconnected();
     });
 
-    expect(p.hasReconnectedRef.current).toBe(true);
-    expect(p.setIsOffline).toHaveBeenCalledWith(false);
+    expect(params.hasReconnectedRef.current).toBe(true);
+    expect(params.setIsOffline).toHaveBeenCalledWith(false);
 
     // Timer triggers banner update
     jest.runOnlyPendingTimers();
@@ -203,24 +199,24 @@ describe('useGenesysSubscriptions', () => {
   });
 
   test('old messages subscription maps, appends to history, and merges', () => {
-    const p = baseParams({ genesysIsReady: true });
-    let onOld, onAllFetched;
+    const params = baseParams({ genesysIsReady: true });
+    let onOldMessages, onAllFetched;
 
-    genesysService.subscribeToGenesysOldMessages.mockImplementation((cb1, cb2) => {
-      onOld = cb1;
-      onAllFetched = cb2;
+    genesysService.subscribeToGenesysOldMessages.mockImplementation((callback1, callback2) => {
+      onOldMessages = callback1;
+      onAllFetched = callback2;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     const historical = { messages: [{ id: 'h1' }, { id: 'h2' }] };
     act(() => {
-      onOld(historical);
+      onOldMessages(historical);
     });
 
     expect(setHideContentToHistoricalMessages).toHaveBeenCalledWith(historical.messages);
-    expect(p.setHistoricalMessages).toHaveBeenCalled();
-    expect(p.mergeChatHistory).toHaveBeenCalledWith(
+    expect(params.setHistoricalMessages).toHaveBeenCalled();
+    expect(params.mergeChatHistory).toHaveBeenCalledWith(
       expect.arrayContaining([{ id: 'h1', historical: true }, { id: 'h2', historical: true }])
     );
 
@@ -228,18 +224,18 @@ describe('useGenesysSubscriptions', () => {
     act(() => {
       onAllFetched();
     });
-    expect(p.setAllHistoryFetched).toHaveBeenCalledWith(true);
+    expect(params.setAllHistoryFetched).toHaveBeenCalledWith(true);
   });
 
   test('session restored merges history and scrolls when NOT a reconnect event', () => {
-    const p = baseParams({ genesysIsReady: true, hasReconnectedRef: { current: false } });
+    const params = baseParams({ genesysIsReady: true, hasReconnectedRef: { current: false } });
     let onRestored;
 
-    genesysService.subscribeToSessionRestored.mockImplementation(cb => {
-      onRestored = cb;
+    genesysService.subscribeToSessionRestored.mockImplementation(callback => {
+      onRestored = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     const historical = { messages: [{ id: 'sh1' }] };
     act(() => {
@@ -247,79 +243,162 @@ describe('useGenesysSubscriptions', () => {
     });
 
     expect(setHideContentToHistoricalMessages).toHaveBeenCalledWith(historical.messages);
-    expect(p.setHistoricalMessages).toHaveBeenCalled();
-    expect(p.mergeChatHistory).toHaveBeenCalled();
-    expect(p.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
+    expect(params.setHistoricalMessages).toHaveBeenCalled();
+    expect(params.mergeChatHistory).toHaveBeenCalled();
+    expect(params.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
   });
 
   test('session restored does nothing when hasReconnectedRef.current is true', () => {
-    const p = baseParams({ genesysIsReady: true, hasReconnectedRef: { current: true } });
+    const params = baseParams({ genesysIsReady: true, hasReconnectedRef: { current: true } });
     let onRestored;
 
-    genesysService.subscribeToSessionRestored.mockImplementation(cb => {
-      onRestored = cb;
+    genesysService.subscribeToSessionRestored.mockImplementation(callback => {
+      onRestored = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     act(() => {
       onRestored({ messages: [{ id: 'ignored' }] });
     });
 
     expect(setHideContentToHistoricalMessages).not.toHaveBeenCalled();
-    expect(p.setHistoricalMessages).not.toHaveBeenCalled();
-    expect(p.mergeChatHistory).not.toHaveBeenCalled();
-    expect(p.setShouldScrollToLatestMessage).not.toHaveBeenCalled();
+    expect(params.setHistoricalMessages).not.toHaveBeenCalled();
+    expect(params.mergeChatHistory).not.toHaveBeenCalled();
+    expect(params.setShouldScrollToLatestMessage).not.toHaveBeenCalled();
   });
 
   test('agent typing: subscribe triggers banner and typing=true; unsubscribe callback sets typing=false', () => {
-    const p = baseParams({ genesysIsReady: false });
+    const params = baseParams({genesysIsReady: true });
 
-    let onTypingCb;
-    let unTypingCb;
-    genesysService.subscribeAgentTyping.mockImplementation(cb => {
-      onTypingCb = cb;
+    let onTypingCallback;
+    let unTypingCallback;
+
+    genesysService.subscribeAgentTyping.mockImplementation(callback => {
+      onTypingCallback = callback;
     });
-    genesysService.unSubscribeAgentTyping.mockImplementation(cb => {
-      unTypingCb = cb;
+    genesysService.unSubscribeAgentTyping.mockImplementation(callback => {
+      unTypingCallback = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     // Simulate typing started
     act(() => {
-      onTypingCb();
+      onTypingCallback();
     });
-    expect(p.setAgentIsTyping).toHaveBeenCalledWith(true);
+
+    expect(params.setAgentIsTyping).toHaveBeenCalledWith(true);
+    expect(setAgentConnectedBanner).toHaveBeenCalledTimes(1);
     expect(setAgentConnectedBanner).toHaveBeenCalledWith(expect.any(Array), 'Agent joined');
 
     // Simulate typing timeout
     act(() => {
-      unTypingCb();
+      unTypingCallback();
     });
-    expect(p.setAgentIsTyping).toHaveBeenCalledWith(false);
+    expect(params.setAgentIsTyping).toHaveBeenCalledWith(false);
+  });
+
+  test('agent typing: first typing event triggers ONE banner', () => {
+    const params = baseParams({genesysIsReady: true });
+
+    let onTypingCallback;
+
+    genesysService.subscribeAgentTyping.mockImplementation(cb => {
+      onTypingCallback = cb;
+    });
+
+    renderHook(() => useGenesysSubscriptions(params));
+
+    act(() => {
+      onTypingCallback();
+    });
+
+    expect(params.setAgentIsTyping).toHaveBeenCalledWith(true);
+    expect(setAgentConnectedBanner).toHaveBeenCalledTimes(1);
+    expect(setAgentConnectedBanner).toHaveBeenCalledWith(expect.any(Array), 'Agent joined');
+  });
+
+  test('agent typing: subsequent typing events DO NOT add more banners', () => {
+    const params = baseParams({genesysIsReady: true });
+
+    let onTypingCallback;
+
+    genesysService.subscribeAgentTyping.mockImplementation(cb => {
+      onTypingCallback = cb;
+    });
+
+    renderHook(() => useGenesysSubscriptions(params));
+
+    // First typing → banner
+    act(() => onTypingCallback());
+
+    // Reset mock call count to isolate subsequent checks
+    setAgentConnectedBanner.mockClear();
+
+    // More typing events
+    act(() => onTypingCallback());
+    act(() => onTypingCallback());
+    act(() => onTypingCallback());
+
+    // No more banners
+    expect(setAgentConnectedBanner).not.toHaveBeenCalled();
+  });
+
+  test('agent typing: typing after disconnect shows NEW banner again', () => {
+    const params = baseParams({genesysIsReady: true });
+
+    let onTypingCallback;
+    let onMessagesCallback;
+
+    genesysService.subscribeAgentTyping.mockImplementation(cb => {
+      onTypingCallback = cb;
+    });
+
+    genesysService.subscribeToGenesysMessages.mockImplementation(cb => {
+      onMessagesCallback = cb;
+    });
+
+    // Simulate chat end detection
+    checkChatEnded.mockReturnValue(true);
+
+    renderHook(() => useGenesysSubscriptions(params));
+
+    // ---- First agent typing → SHOW banner
+    act(() => onTypingCallback());
+    expect(setAgentConnectedBanner).toHaveBeenCalledTimes(1);
+
+    setAgentConnectedBanner.mockClear();
+
+    // ---- Agent disconnects
+    act(() => onMessagesCallback([{ id: 'disconnect-event' }]));
+
+    // ---- New typing event → SHOW banner again
+    act(() => onTypingCallback());
+
+    expect(setAgentConnectedBanner).toHaveBeenCalledTimes(1);
   });
 
   test('error subscription sets error state when ready', () => {
-    const p = baseParams({ genesysIsReady: true });
+    const params = baseParams({ genesysIsReady: true });
 
     let onError;
-    genesysService.subscribeToErrors.mockImplementation(cb => {
-      onError = cb;
+    genesysService.subscribeToErrors.mockImplementation(callback => {
+      onError = callback;
     });
 
-    renderHook(() => useGenesysSubscriptions(p));
+    renderHook(() => useGenesysSubscriptions(params));
 
     act(() => {
       onError();
     });
 
-    expect(p.setIsErrorState).toHaveBeenCalledWith(true);
+    expect(params.setIsErrorState).toHaveBeenCalledWith(true);
   });
 
   test('no error subscription when not ready', () => {
-    const p = baseParams({ genesysIsReady: false });
-    renderHook(() => useGenesysSubscriptions(p));
+    const params = baseParams({ genesysIsReady: false });
+    renderHook(() => useGenesysSubscriptions(params));
     expect(genesysService.subscribeToErrors).not.toHaveBeenCalled();
   });
 });

@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom';
 import { render, screen } from '@testing-library/react';
-import AgentConnected from '../../../src/components/content/agent-connected';
+import AgentConnected from '../../../src/components/message/agent-connected';
 
 describe('AgentConnected component', () => {
   test('renders the agent connected message with provided text', () => {

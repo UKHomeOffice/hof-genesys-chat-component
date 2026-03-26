@@ -104,16 +104,15 @@ function hasBlockMarkdown(markdown) {
  * Uses ReactMarkdown with custom renderers for links, paragraphs and lists.
  * 
  * @param {string} text - the message text coming from Genesys, which may contain markdown
- * @param {string} messageType - 'Inbound' or 'Outbound' to determine styling
+ * @param {string} type - 'Inbound' or 'Outbound' to determine styling
  * @param {string} utmParam - UTM parameters to append to non-mailto links 
  * @returns 
  */
-export default function MessageText({ text, messageType, utmParam }) {
+export default function MessageText({ text, type, utmParam }) {
   // Remove all backslashes + normalize literal "\n" to newline before parsing
   const cleanedText = (text || '')
     .replace(/\\n/g, '\n')   // literal backslash+n -> real newline
     .replace(/\\/g, '');     // remove remaining backslashes
-
 
   // Check if cleaned text contains block - level elements
   const hasBlocks = hasBlockMarkdown(cleanedText)
@@ -123,7 +122,7 @@ export default function MessageText({ text, messageType, utmParam }) {
       remarkPlugins={[remarkGfm, remarkBreaks]}
       components={{
         a: (props) => renderGovUkLink({ ...props, utmParam }),
-        p: (children) => renderParagraph(children, messageType, hasBlocks),
+        p: (children) => renderParagraph(children, type, hasBlocks),
         ul: (children) => renderUnorderedList(children),
         ol: (children) => renderOrderedList(children),
       }}
@@ -140,7 +139,7 @@ export default function MessageText({ text, messageType, utmParam }) {
   // If block-level content exists: wrap everything in a <div> with message classes
   return (
     <div data-testid="message-root"
-      className={`${messageType === "Inbound"
+      className={`${type === "Inbound"
         ? "inbound-message"
         : "outbound-message"
         } govuk-body`}

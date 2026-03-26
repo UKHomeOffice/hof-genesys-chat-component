@@ -25,18 +25,13 @@ describe('setHideContentProperty', () => {
 
   it('should set hideContent = false when message is Outbound Structured with content', () => {
     const result = setHideContentProperty(newMessage, false);
-    expect(result[0].content.hideContent).toBe(false);
+    expect(result[0].hideContent).toBe(false);
   });
 
 
   it('should set hideContent = true when message is Outbound Structured with content', () => {
     const result = setHideContentProperty(newMessage, true);
-    expect(result[0].content.hideContent).toBe(true);
-  });
-
-  it('should return the same object reference', () => {
-    const result = setHideContentProperty(newMessage, false);
-    expect(result).toBe(newMessage);
+    expect(result[0].hideContent).toBe(true);
   });
 
   it('should be undefined ', () => {
@@ -66,7 +61,7 @@ describe('getStructureMessageIndex', () => {
 describe('setHideContentPropertyWithIndex', () => {
   it('should set hideContent = true at the given index', () => {
     const result = setHideContentPropertyWithIndex(2, messages, true);
-    expect(result[2].content.hideContent).toBe(true);
+    expect(result[2].hideContent).toBe(true);
   });
 });
 
@@ -74,7 +69,7 @@ describe('setHideContentPropertyWithIndex', () => {
 describe('setPreviousStructureHideTrue', () => {
   it('should set hideContent = true at the given index', () => {
     const result = setPreviousStructureHideTrue(messages);
-    expect(result[2].content.hideContent).toBe(true);
+    expect(result[2].hideContent).toBe(true);
   });
 
   it('should be undefined', () => {
@@ -88,11 +83,11 @@ describe('setHideContentToHistoricalMessages', () => {
 
   it('should exempt the last structure message then set remainig structured message hideContent = true ', () => {
     const result = setHideContentToHistoricalMessages(messages);
-    expect(result[1].content.hideContent).toBe(true);
+    expect(result[1].hideContent).toBe(true);
   });
 
   it('should set the last structure message hideContent = false', () => {
     const result = setHideContentToHistoricalMessages(messages);
-    expect(result[2].content.hideContent).toBe(false);
+    expect(result[2].hideContent).toBe(false);
   });
 });

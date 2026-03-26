@@ -3,7 +3,12 @@ import { useNavigationType } from 'react-router';
 import { genesysService } from '../services/genesys-service';
 
 /**
- * Custom hook for Genesys initialization
+ * Initializes the Genesys Web Messaging SDK.
+ *
+ * Responsibilities:
+ * 1. Load the Genesys script if not already present.
+ * 2. Initialise a conversation when the SDK is available OR
+ *    when user returns to the page via POP navigation.
  * @param {Object} params - Parameters
  * @param {string} deploymentId - Deployment ID
  * @param {string} localStorageKey - Local storage key
@@ -25,10 +30,10 @@ export function useGenesysInitialization({
   useEffect(() => {
     if (globalThis.Genesys) {
       setGenesysIsReady(true);
-    } else {      
+    } else {
       genesysService.loadGenesysScript(genesysEnvironment, deploymentId);
     }
-  }, [deploymentId, genesysEnvironment, setGenesysIsReady]);
+  }, [genesysEnvironment, deploymentId]);
 
   /**
    * Initialise the Genesys conversation when the Genesys SDK is ready.
@@ -41,5 +46,5 @@ export function useGenesysInitialization({
         localStorageKey
       );
     }
-  }, [localStorageKey, setGenesysIsReady, setIsErrorState, navigationType]);
+  }, [localStorageKey, navigationType]);
 }

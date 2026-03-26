@@ -30,6 +30,10 @@ describe('useGenesysInitialization', () => {
   });
 
   test('calls setGenesysIsReady immediately when globalThis.Genesys already exists', () => {
+    genesysService.initialiseGenesysConversation = jest.fn(
+      (onSuccess) => onSuccess()
+    );
+
     globalThis.Genesys = {}; // Simulate SDK already loaded
     useNavigationType.mockReturnValue('PUSH');
 

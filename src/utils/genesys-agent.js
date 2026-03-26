@@ -41,12 +41,17 @@ function setBanner(messages, bannerProps, bannerType) {
 }
 
 const setAgentConnectedBanner = (messages, humanText) => {
-  const lastMessage = messages[messages.length - 1];
-  if (lastMessage?.connected) {
-    return messages;
+
+  // Clean up the messages array to remove any previous disconnected banner first
+  const cleaned = messages.filter(message => !message.disconnected);
+
+  const last = cleaned[cleaned.length - 1];
+  if (last?.connected) {
+    return cleaned;
   }
+
   return setBanner(
-    messages,
+    cleaned,
     {
       text: humanText,
       type: 'Banner',
@@ -58,12 +63,17 @@ const setAgentConnectedBanner = (messages, humanText) => {
 };
 
 const setAgentDisconnectedBanner = (messages, agentDisconnectedText) => {
-  const lastMessage = messages[messages.length - 1];
-  if (lastMessage?.disconnected) {
-    return messages;
+
+  // Clean up the messages array to remove any previous connected banner first
+  const cleaned = messages.filter(message => !message.connected);
+
+  const last = cleaned[cleaned.length - 1];
+  if (last?.disconnected) {
+    return cleaned;
   }
+
   return setBanner(
-    messages,
+    cleaned,
     {
       text: agentDisconnectedText,
       type: 'Banner',

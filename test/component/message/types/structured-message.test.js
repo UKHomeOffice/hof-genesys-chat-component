@@ -1,142 +1,83 @@
 import '@testing-library/jest-dom';
-import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent } from '@testing-library/react';
 import StructuredMessage from '../../../../src/components/message/types/structured-message';
 
-const structuredMessages = require('../../../data/structured-messages.json');
+describe('StructuredMessage', () => {
+  const contents = [
+    { quickReply: { text: 'Yes', payload: 'Yes' } },
+    { quickReply: { text: 'No', payload: 'No' } },
+  ];
 
-describe('StructuredMessage component', () => {
-  test('renders StructuredMessage components with correct button content', async () => {
-    render(
-      <StructuredMessage
-        contents={structuredMessages[0].content}
-        handleQuickReply={() => { }}
-      />
-    );
-
-    const quickReplyButtons = screen.getAllByRole('button');
-    expect(quickReplyButtons).toHaveLength(2);
-    expect(quickReplyButtons[0]).toHaveTextContent('Yes');
-    expect(quickReplyButtons[1]).toHaveTextContent('No');
+  it('renders a button for each quick reply', () => {
+    render(<StructuredMessage contents={contents} handleQuickReply={jest.fn()} />);
+    expect(screen.getByText('Yes')).toBeInTheDocument();
+    expect(screen.getByText('No')).toBeInTheDocument();
   });
 
-  test('handles Yes button being clicked', async () => {
-
-    const mockHandleReply = jest.fn();
-
-    render(
-      <StructuredMessage
-        contents={structuredMessages[0].content}
-        handleQuickReply={mockHandleReply}
-      />
-    );
-
-    const quickReplyButtons = screen.getAllByRole('button');
-    expect(quickReplyButtons).toHaveLength(2);
-    expect(quickReplyButtons[0]).toHaveTextContent('Yes');
-    expect(quickReplyButtons[1]).toHaveTextContent('No');
-
-    const user = userEvent.setup();
-    await user.click(quickReplyButtons[0]);
-    expect(mockHandleReply).toHaveBeenCalledTimes(1);
-  });
-
-  test('handles No button being clicked', async () => {
-
-    const mockHandleReply = jest.fn();
-
-    render(
-      <StructuredMessage
-        contents={structuredMessages[0].content}
-        handleQuickReply={mockHandleReply}
-      />
-    );
-
-    const quickReplyButtons = screen.getAllByRole('button');
-    expect(quickReplyButtons).toHaveLength(2);
-    expect(quickReplyButtons[0]).toHaveTextContent('Yes');
-    expect(quickReplyButtons[1]).toHaveTextContent('No');
-
-    const user = userEvent.setup();
-    await user.click(quickReplyButtons[1]);
-    expect(mockHandleReply).toHaveBeenCalledTimes(1);
-  });
-
-  test('handles Enter key press on Yes button', async () => {
-    const user = userEvent.setup();
-    const mockHandler = jest.fn();
-
-    const { container } = render(
-      <StructuredMessage
-        contents={structuredMessages[0].content}
-        handleQuickReply={mockHandler}
-      />
-    );
-
-    const noBtn = screen.getByRole('button', { name: 'No' });
-    noBtn.focus();
-    await user.keyboard('{Enter}');
-
-    expect(mockHandler).toHaveBeenCalledTimes(1);
-    expect(mockHandler.mock.calls[0][1]).toBe('No');
-
-    // hidden => nothing rendered
-    expect(container).toBeEmptyDOMElement();
-
-  });
-
-
-  test('clicking a button falls back to payload when text is falsy/absent, then hides component', async () => {
-    
-    const sampleWithMissingText = [
-      { quickReply: { text: '', payload: 'ONLY_PAYLOAD' } },
-      { quickReply: { payload: 'PAYLOAD_WITHOUT_TEXT' } },
-    ];
-
-    const user = userEvent.setup();
-    const mockHandler = jest.fn();
-
-    const { container } = render(
-      <StructuredMessage contents={sampleWithMissingText} handleQuickReply={mockHandler} />
-    );
-
-    // The first button will render as an empty label if text is '', but DOM will still have a button.
-    // Prefer selecting by index if the accessible name is empty:
+  it('applies govuk-button class to each button', () => {
+    render(<StructuredMessage contents={contents} handleQuickReply={jest.fn()} />);
     const buttons = screen.getAllByRole('button');
-    expect(buttons).toHaveLength(2);
-
-    await user.click(buttons[0]); // text is '', payload is ONLY_PAYLOAD
-
-    expect(mockHandler).toHaveBeenCalledTimes(1);
-    expect(mockHandler.mock.calls[0][1]).toBe('ONLY_PAYLOAD');
-
-    // After click, component hidden => renders nothing
-    expect(container).toBeEmptyDOMElement();
+    buttons.forEach((button) => {
+      expect(button).toHaveClass('govuk-button');
+      expect(button).toHaveClass('message-button');
+    });
   });
 
+  it('calls handleQuickReply with the quick reply text on click', () => {
+    const handleQuickReply = jest.fn();
+    render(<StructuredMessage contents={contents} handleQuickReply={handleQuickReply} />);
+    fireEvent.click(screen.getByText('Yes'));
+    expect(handleQuickReply).toHaveBeenCalledTimes(1);
+    expect(handleQuickReply).toHaveBeenCalledWith(expect.any(Object), 'Yes');
+  });
 
-  test('pressing a non-Enter key does not call handler and does not hide', async () => {
-    const user = userEvent.setup();
-    const mockHandler = jest.fn();
+  it('calls handleQuickReply with payload when text is absent', () => {
+    const contentsWithPayloadOnly = [
+      { quickReply: { text: '', payload: 'payload-value' } },
+    ];
+    const handleQuickReply = jest.fn();
+    render(<StructuredMessage contents={contentsWithPayloadOnly} handleQuickReply={handleQuickReply} />);
+    fireEvent.click(screen.getByRole('button'));
+    expect(handleQuickReply).toHaveBeenCalledWith(expect.any(Object), 'payload-value');
+  });
 
-    render(
-      <StructuredMessage
-        contents={structuredMessages[0].content}
-        handleQuickReply={mockHandler}
-      />
+  it('calls handleQuickReply with the quick reply text on Enter keydown', () => {
+    const handleQuickReply = jest.fn();
+    render(<StructuredMessage contents={contents} handleQuickReply={handleQuickReply} />);
+    fireEvent.keyDown(screen.getByText('No'), { key: 'Enter' });
+    expect(handleQuickReply).toHaveBeenCalledWith(expect.any(Object), 'No');
+  });
+
+  it('does not call handleQuickReply on non-Enter keydown', () => {
+    const handleQuickReply = jest.fn();
+    render(<StructuredMessage contents={contents} handleQuickReply={handleQuickReply} />);
+    fireEvent.keyDown(screen.getByText('Yes'), { key: 'Space' });
+    expect(handleQuickReply).not.toHaveBeenCalled();
+  });
+
+  it('does not manage its own hidden state — always renders when mounted', () => {
+    // The component should render unconditionally; hideContent is controlled
+    // upstream by the message object and checked in OutboundMessage before
+    // StructuredMessage is rendered at all.
+    const handleQuickReply = jest.fn();
+    render(<StructuredMessage contents={contents} handleQuickReply={handleQuickReply} />);
+    // Clicking a button should NOT cause the buttons to disappear from the DOM,
+    // since there is no longer any local hidden state.
+    fireEvent.click(screen.getByText('Yes'));
+    expect(screen.getByText('Yes')).toBeInTheDocument();
+    expect(screen.getByText('No')).toBeInTheDocument();
+  });
+
+  it('renders inside a govuk-button-group container', () => {
+    const { container } = render(
+      <StructuredMessage contents={contents} handleQuickReply={jest.fn()} />
     );
+    expect(container.querySelector('.govuk-button-group.select-question')).toBeInTheDocument();
+  });
 
-    const yesBtn = screen.getByRole('button', { name: 'Yes' });
-    yesBtn.focus();
-
-    // Use a key that does NOT activate buttons
-    await user.keyboard('a');
-    // or: await user.keyboard('{ArrowRight}')
-
-    // Should not have been called; still visible
-    expect(mockHandler).not.toHaveBeenCalled();
-
-    expect(screen.getByRole('button', { name: 'Yes' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'No' })).toBeInTheDocument();
+  it('renders nothing when contents is an empty array', () => {
+    const { container } = render(<StructuredMessage contents={[]} handleQuickReply={jest.fn()} />);
+    expect(container.querySelector('.govuk-button-group')).toBeInTheDocument();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
   });
 });

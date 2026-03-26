@@ -1,7 +1,39 @@
-import {
-  renderMessage,
-  LoadMoreMessagesButton
-} from './message-helpers';
+import { resolveMessageComponent } from './delegates/message-registry';
+import LoadMoreMessagesButton from './load-more-messages';
+
+/**
+ * We only show the button to load more messages when there are at least 24 historical messages,
+ * taking into account that some of these may be eventType messages which aren't text based messages.
+ * These messages are filtered out before counting.
+ * @returns {boolean} whether to show the Load More Messages button
+ */
+const showLoadMoreMessagesButton = (lastHistoryBatchCount, allHistoryFetched) => {
+  // Filter out any eventType messages, as these aren't messages
+  // if (!historicalMessages.length) {
+  //   return false;
+  // }
+  // const textMessages = historicalMessages.filter((message) => !Object.hasOwn(message, 'eventType'));
+  // return textMessages.length >= 24 && !allHistoryFetched;
+  
+  return lastHistoryBatchCount === 25 && !allHistoryFetched;
+};
+
+/**
+ * Function to check if the last message contains text. Starting from the
+ * provided index, it checks backwards through the messages array to find
+ * a message that contains text.
+ * Some messages are presence or event messages and do not contain text,
+ * therefore we don't want to use these to determine which message to 
+ * attach the lastMessageRef to for scrolling purposes.
+ * @param {integer} indexToCheck the message index to check against.
+ * @returns boolean - whether the last message contains text.
+ */
+const resolveLastTextIndex = (messages) => {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]?.text !== undefined) return i;
+  }
+  return -1;
+};
 
 export default function Messages({
   messages,
@@ -12,44 +44,10 @@ export default function Messages({
   allHistoryFetched,
   serviceName,
   utmParam,
-  botMetaDisplay
+  botMetaDisplay,
+  lastHistoryBatchCount
 }) {
-
-  /**
-   * We only show the button to load more messages when there are at least 24 historical messages,
-   * taking into account that some of these may be eventType messages which aren't text based messages.
-   * These messages are filtered out before counting.
-   * @returns {boolean} whether to show the Load More Messages button
-   */
-  const showLoadMoreMessagesButton = () => {
-    // Filter out any eventType messages, as these aren't messages
-    if (historicalMessages.length > 0) {
-      const filteredHistoricalMessages = historicalMessages.filter(message => {
-        return !message.hasOwnProperty('eventType');
-      });
-      return filteredHistoricalMessages.length >= 24 && !allHistoryFetched;
-    }
-    return false;
-  };
-
-  /**
-   * Function to check if the last message contains text. Starting from the
-   * provided index, it checks backwards through the messages array to find
-   * a message that contains text.
-   * Some messages are presence or event messages and do not contain text,
-   * therefore we don't want to use these to determine which message to 
-   * attach the lastMessageRef to for scrolling purposes.
-   * @param {integer} indexToCheck the message index to check against.
-   * @returns boolean - whether the last message contains text.
-   */
-  const lastMessageContainsText = (indexToCheck) => {
-    for (let i = indexToCheck; i >= 0; i--) {
-      if (messages[i] !== undefined && messages[i].text !== undefined) {
-        return true;
-      }
-    }
-    return false;
-  };
+  const lastTextIndex = resolveLastTextIndex(messages);
 
   return (
     <div className="chat-messages" role="log"
@@ -58,37 +56,29 @@ export default function Messages({
       aria-relevant="additions text"
       aria-label="Chat messages">
       <div className='load-messages-section'>
-        {showLoadMoreMessagesButton() &&
+        {showLoadMoreMessagesButton(lastHistoryBatchCount, allHistoryFetched) &&
           <LoadMoreMessagesButton onClick={fetchMessageHistory} />
         }
       </div>
-      {messages.length !== 0 && (
-        messages.map((message, index) => {
-          if (message.type === 'Banner') {
-            return (
-              <div
-                key={index}
-                className="chat-hint-message"
-                role="article"
-                aria-label={message.disconnected ? 'Agent Disconnected' : 'Agent Joined'}
-                ref={index === messages.length - 1 ? lastMessageRef : null}
-              >
-                <p className="govuk-body">{message.text}</p>
-              </div>
-            );
-          }
-          return renderMessage(
-            message,
-            index,
-            lastMessageContainsText(messages.length - 1),
-            lastMessageRef,
-            handleQuickReply,
-            serviceName,
-            utmParam,
-            botMetaDisplay
-          );
-        })
-      )}
+      {messages.map((message, index) => {
+        const MessageComponent = resolveMessageComponent(message);
+        if (!MessageComponent) {
+          return null;
+        }
+
+        return (
+          <MessageComponent
+            key={index}
+            message={message}
+            isLast={index === lastTextIndex}
+            lastMessageRef={lastMessageRef}
+            handleQuickReply={handleQuickReply}
+            serviceName={serviceName}
+            utmParam={utmParam}
+            botMetaDisplay={botMetaDisplay}
+          />
+        )
+      })}
     </div>
   );
 }

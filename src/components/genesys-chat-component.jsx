@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import ChatForm from './chat/chat-form.jsx';
 import Messages from './message/messages.jsx';
 import TypingIndicator from './message/typing-indicator.jsx';
@@ -7,7 +7,7 @@ import { genesysService } from '../services/genesys-service';
 import { useChatState } from '../hooks/use-chat-state.js';
 import { useGenesysInitialization } from '../hooks/use-genesys-initialisation.js';
 import { useGenesysSubscriptions } from '../hooks/use-genesys-subscriptions.js';
-import { useChatActions } from '../hooks/use-chat-actions.js';
+import { useChatActions } from '../hooks/chat/use-chat-actions.js';
 import { useChatUI } from '../hooks/use-chat-ui.js';
 
 /**
@@ -44,20 +44,19 @@ export default function GenesysChatComponent({
 }) {
 
   /*
-   * Destructure service metadata with default values to ensure all necessary properties are available, 
-   * which simplifies the implementation for services using the component as they can provide only the 
-   * metadata relevant to them without needing to include all properties.
+   * Resolve service metadata once per render cycle, applying defaults for any
+   * properties the consuming service has not provided.
    */
-  const destructuredServiceMetadata = {
+  const destructuredServiceMetadata = useMemo(() => ({
     localStorageKey: serviceMetadata.localStorageKey || 'genesys_chat_session',
-    serviceName: serviceMetadata.serviceName || '',
+    serviceName: (serviceMetadata.serviceName || '').toLowerCase(),
     agentConnectedText: serviceMetadata.agentConnectedText || 'You are now connected to an agent.',
     agentDisconnectedText: serviceMetadata.agentDisconnectedText || 'The agent has disconnected.',
     offlineText: serviceMetadata.offlineText || 'You are offline. Please check your connection.',
     onlineText: serviceMetadata.onlineText || 'You are back online.',
     utmParam: serviceMetadata.utmParams || "",
     botMetaDisplay: serviceMetadata.botMetaDisplay || 'Digital assistant',
-  }
+  }), [serviceMetadata]);
 
   /**
    * Initialise the genesysService with logging and debug mode settings on component mount.
@@ -67,7 +66,7 @@ export default function GenesysChatComponent({
   useEffect(() => {
     genesysService.setLogger(loggingCallback);
     genesysService.setDebugMode(debugMode);
-  }, [loggingCallback]);
+  }, [loggingCallback, debugMode]);
 
   const chatState = useChatState();
   const {
@@ -85,8 +84,6 @@ export default function GenesysChatComponent({
     setShouldScrollToLatestMessage,
     agentIsTyping,
     setAgentIsTyping,
-    agentName,
-    setAgentName,
     isErrorState,
     setIsErrorState,
     messageIndex,
@@ -97,6 +94,8 @@ export default function GenesysChatComponent({
     setIsOffline,
     hasReconnectedRef,
     lastMessageRef,
+    lastHistoryBatchCount,
+    setLastHistoryBatchCount
   } = chatState;
 
   const { mergeChatHistory } = useChatUI({
@@ -121,7 +120,6 @@ export default function GenesysChatComponent({
     setHistoricalMessages,
     setShouldScrollToLatestMessage,
     setAgentIsTyping,
-    setAgentName,
     setMessageIndex,
     setAllHistoryFetched,
     setIsOffline,
@@ -131,19 +129,19 @@ export default function GenesysChatComponent({
     offlineText: destructuredServiceMetadata.offlineText,
     onlineText: destructuredServiceMetadata.onlineText,
     mergeChatHistory,
-    hasReconnectedRef,
+    hasReconnectedRef,    
+    setLastHistoryBatchCount
   });
 
   const {
     sendMessage,
-    handleKeyPress,
-    handleSetInputMessage,
+    handleKeyPress,    
     handleQuickReply,
     handleEndChat,
     handleFetchMessageHistory,
   } = useChatActions({
-    userInput,
-    setUserInput,
+    userInput,  
+    setUserInput,  
     setMessages,
     messageIndex,
     setShowEndChatModal,
@@ -166,11 +164,12 @@ export default function GenesysChatComponent({
             handleQuickReply={handleQuickReply}
             fetchMessageHistory={handleFetchMessageHistory}
             allHistoryFetched={allHistoryFetched}
-            serviceName={destructuredServiceMetadata.serviceName.toLowerCase()}
+            serviceName={destructuredServiceMetadata.serviceName}
             utmParam={destructuredServiceMetadata.utmParam}
             botMetaDisplay={destructuredServiceMetadata.botMetaDisplay}
+            lastHistoryBatchCount={lastHistoryBatchCount}
           />
-          {agentIsTyping && <TypingIndicator isAgentTyping={agentIsTyping} agentName={agentName} />}
+          {agentIsTyping && <TypingIndicator isAgentTyping={agentIsTyping} />}
           {showEndChatModal && (
             <EndChatModal
               showModal={showEndChatModal}
@@ -181,7 +180,7 @@ export default function GenesysChatComponent({
           <hr />
           <ChatForm
             inputMessage={userInput}
-            setInputMessage={handleSetInputMessage}
+            setInputMessage={setUserInput}
             sendMessage={sendMessage}
             handleKeyPress={handleKeyPress}
             genesysIsReady={genesysIsReady}

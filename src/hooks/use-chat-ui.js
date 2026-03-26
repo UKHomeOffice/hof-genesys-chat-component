@@ -1,5 +1,4 @@
 import { useEffect, useCallback } from 'react';
-import { mapHistoricalMessagesToStandardMessageFormat } from '../utils/message-utils';
 
 /**
  * Custom hook for chat UI behaviors
@@ -18,7 +17,7 @@ export function useChatUI({
   setMessages,
   lastMessageRef,
 }) {
-  
+
   /*
    * Ensure the last message is the one visible when messages load (to cater for previous messages).
    * By using `block: nearest` it ensures only the div containing the messages gets scrolled, and not
@@ -26,21 +25,43 @@ export function useChatUI({
    */
   useEffect(() => {
     if (shouldScrollToLatestMessage) {
-      scrollToLatestMessage();
+      lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-  }, [messages, shouldScrollToLatestMessage]);
+  }, [messages, shouldScrollToLatestMessage, lastMessageRef]);
 
-  const scrollToLatestMessage = useCallback(() => {
-    lastMessageRef.current?.scrollIntoView({
-      behavior: 'smooth',
-      block: 'nearest',
-    });
-  }, [lastMessageRef]);
-
-  const mergeChatHistory = useCallback((historicalMessages) => {
-    const mappedMessages = mapHistoricalMessagesToStandardMessageFormat(historicalMessages);
+  /*
+   * Merges already-mapped historical messages into the main messages state.
+   * Mapping from the Genesys historical format to the standard message format is
+   * the responsibility of the caller (useGenesysSubscriptions), which is where
+   * the raw historical data arrives. This hook only handles the UI concern of
+   * merging and reversing the list.
+   * The scroll flag is set to false to prevent jumping when prepending history.
+   */
+  const mergeChatHistory = useCallback((mappedMessages) => {
     setShouldScrollToLatestMessage(false);
-    setMessages((prevMessages) => [...prevMessages, ...mappedMessages].reverse());
+
+    setMessages((prevMessages) => {
+      const merged = [...mappedMessages, ...prevMessages];
+
+      /*
+       * Sort the message chronologically based on timestamps to achieve correct order.
+       * If the timestamps are identical, use the ID (hex-strings) for comparison (fallback).
+       * IDs are NOT used to determine chronology, they only ensure stable ordering when timestamps collide
+       */
+      merged.sort((messageA, messageB) => {
+        const timestampA = new Date(messageA.timestamp).getTime();
+        const timestampB = new Date(messageB.timestamp).getTime();
+
+        if (timestampA !== timestampB) {
+          return timestampA - timestampB;
+        }
+
+        return messageA.id.localeCompare(messageB.id);
+      });
+
+
+      return merged;
+    });
   }, [setShouldScrollToLatestMessage, setMessages]);
 
   return {

@@ -161,7 +161,7 @@ describe('MessageText component', () => {
   });
 
   test('renders Inbound message with correct styling', () => {
-    const { container } = render(<MessageText text='This has no markdown content.' messageType='Inbound' />);
+    const { container } = render(<MessageText text='This has no markdown content.' type='Inbound' />);
     const paragraph = getParagraph(container);
 
     expect(paragraph).toBeInTheDocument();

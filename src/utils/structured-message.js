@@ -1,70 +1,64 @@
+// Common predicate for identifying a structured outbound message with content
+const isStructuredOutbound = (msg) =>
+  msg?.direction === "Outbound" &&
+  msg?.type === "Structured" &&
+  Boolean(msg?.content);
 
-// Set visibility property to structured message
-const setHideContentProperty = (recievedMessage, boolValue) => {
-  recievedMessage.map(message => {
-    if (message?.direction === 'Outbound' &&
-      message?.type === 'Structured' &&
-      message?.content) {
-      Object.defineProperty(message.content, 'hideContent', { value: boolValue, writable: true });
+// Set hideContent on ALL structured outbound messages (produces new array)
+const setHideContentProperty = (messages, boolValue) =>
+  messages.map((message) =>
+    isStructuredOutbound(message)
+      ? { ...message, hideContent: boolValue }
+      : message
+  );
+
+// Find LAST structured outbound message index
+const getStructureMessageIndex = (messages) => {
+  return [...messages]
+    .map((message, index) => ({ message, index }))
+    .reverse()
+    .find(({ message }) => isStructuredOutbound(message))?.index ?? -1;
+}
+
+// Set hideContent on a specific message index (returns new array)
+const setHideContentPropertyWithIndex = (messageIndex, prevMessages, boolValue) => {
+  return prevMessages.map((message, index) =>
+    index === messageIndex && message?.content
+      ? {
+        ...message,
+        hideContent: boolValue,
+        }
+      : message
+  );
+}
+
+// Mutates messages by setting hideContent=true on all matching messages
+const setPreviousStructureHideTrue = (prevMessages) => {
+  prevMessages.forEach((msg) => {
+    if (isStructuredOutbound(msg)) {
+      msg.hideContent = true;
     }
   });
-  return recievedMessage;
-};
-
-const getStructureMessageIndex = (messages) => {
-  let totalMesssages = messages.length - 1;
-  for (totalMesssages; totalMesssages >= 0; totalMesssages--) {
-    if (messages[totalMesssages]?.direction === 'Outbound' &&
-      messages[totalMesssages]?.type === 'Structured' &&
-      messages[totalMesssages]?.content) {
-      return totalMesssages;
-    }
-  }
-  return -1;
-};
-
-const setHideContentPropertyWithIndex = (messageIndex, prevMessages, boolValue) => {
-  if (prevMessages.length >= 0) {
-    const currentState = [...prevMessages];
-    currentState.forEach((message, index) => {
-      if (index === messageIndex)
-        message.content.hideContent = boolValue;
-    });
-    return currentState;
-  }
-  return prevMessages;
-};
-
-const setPreviousStructureHideTrue = (prevMessages) => {
-
-  if (prevMessages.length >= 0) {
-    prevMessages.map((message) => {
-      if (message?.direction === 'Outbound' &&
-        message?.type === 'Structured' &&
-        message?.content) {
-        message.content.hideContent = true;
-      }
-    });
-  }
   return prevMessages;
 };
 
 const setHideContentToHistoricalMessages = (messages) => {
-  const currentMessages = setHideContentProperty(messages, true);
+  const withAllHidden = setHideContentProperty(messages, true);
+  const index = getStructureMessageIndex(withAllHidden);
 
-  const getMessageIndex = getStructureMessageIndex(currentMessages);
-  if (getMessageIndex !== -1)
-    [...currentMessages,
-      ...setHideContentPropertyWithIndex(getMessageIndex,
-        messages, false)];
+  if (index === -1) {
+    return withAllHidden;
+  }
 
-  return currentMessages;
+  // Unhide the last structured one
+  return setHideContentPropertyWithIndex(index, withAllHidden, false);
 };
 
 export {
+  isStructuredOutbound,
   getStructureMessageIndex,
   setHideContentProperty,
   setHideContentPropertyWithIndex,
   setPreviousStructureHideTrue,
-  setHideContentToHistoricalMessages
+  setHideContentToHistoricalMessages,
 };

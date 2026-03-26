@@ -1,11 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { genesysService } from '../services/genesys-service';
 import {
   clearAgentTypingOnOutboundHumanMessage,
   checkChatEnded,
+  mapHistoricalMessagesToStandardMessageFormat,
 } from '../utils/message-utils';
 import {
-  getCurrentAgentName,
   setAgentConnectedBanner,
   setAgentDisconnectedBanner,
   setOfflineBanner,
@@ -17,6 +17,7 @@ import {
   setPreviousStructureHideTrue,
   setHideContentToHistoricalMessages,
 } from '../utils/structured-message';
+import { resetAgentBannerState, shouldShowAgentConnectedBanner } from './helpers/agent-banner-logic';
 
 /**
  * Custom hook to handle Genesys subscriptions
@@ -26,7 +27,6 @@ import {
  * @param {Function} setHistoricalMessages - Setter for historical messages
  * @param {Function} setShouldScrollToLatestMessage - Setter for scroll flag
  * @param {Function} setAgentIsTyping - Setter for agent typing
- * @param {Function} setAgentName - Setter for agent name
  * @param {Function} setMessageIndex - Setter for message index
  * @param {Function} setAllHistoryFetched - Setter for history fetched
  * @param {Function} setIsOffline - Setter for offline state
@@ -44,7 +44,6 @@ export function useGenesysSubscriptions({
   setHistoricalMessages,
   setShouldScrollToLatestMessage,
   setAgentIsTyping,
-  setAgentName,
   setMessageIndex,
   setAllHistoryFetched,
   setIsOffline,
@@ -55,7 +54,14 @@ export function useGenesysSubscriptions({
   onlineText,
   mergeChatHistory,
   hasReconnectedRef,
+  setLastHistoryBatchCount
 }) {
+
+  /*
+   * Ref to track whether we have already shown a "connected" banner
+   * for the current agent session. Reset to false on disconnect.
+   */
+  const hasShownConnectedBanner = useRef(false);
 
   /**
    * Subscribe to Genesys messages received once the Genesys SDK is ready.
@@ -70,12 +76,12 @@ export function useGenesysSubscriptions({
     if (genesysIsReady) {
       genesysService.subscribeToGenesysMessages((newMessages) => {
         setShouldScrollToLatestMessage(true);
-        setAgentName(getCurrentAgentName(newMessages[0]));
         setMessages((prevMessages) => {
           const currentMessages = setPreviousStructureHideTrue(prevMessages);
           let newState = [...currentMessages, ...setHideContentProperty(newMessages, false)];
           setMessageIndex(getStructureMessageIndex(newState));
           if (checkChatEnded(newState)) {
+            resetAgentBannerState(hasShownConnectedBanner);
             newState = setAgentDisconnectedBanner(newState, agentDisconnectedText);
           }
           return newState;
@@ -87,18 +93,23 @@ export function useGenesysSubscriptions({
       });
     }
   }, [
-    genesysIsReady, 
-    setMessages, 
-    setShouldScrollToLatestMessage, 
-    setAgentName, 
-    setMessageIndex, 
-    agentDisconnectedText, 
+    genesysIsReady,
+    setMessages,
+    setShouldScrollToLatestMessage,
+    setMessageIndex,
+    agentDisconnectedText,
     setAgentIsTyping
   ]);
 
   /**
-   * Subscribe to Genesys connection status events (offline and reconnected) once the Genesys SDK is ready.
-   * This effect ensures that the chat displays appropriate banners when the user goes offline or comes back online.
+   * Subscribe to connection status events once the SDK is ready.
+   * - Offline: sets offline state and appends an offline banner
+   * - Reconnected: clears offline state and appends a reconnected banner
+   *
+   * The reconnected banner is deferred by 10ms to avoid a race condition where
+   * the banner is appended before the offline banner has been removed from state,
+   * causing both to appear simultaneously. The timer is cleared on effect cleanup
+   * to prevent a state update on an unmounted component.
    */
   useEffect(() => {
     if (genesysIsReady) {
@@ -106,13 +117,18 @@ export function useGenesysSubscriptions({
         setIsOffline(true);
         setMessages((prevMessages) => setOfflineBanner(prevMessages, offlineText));
       });
+
+      let reconnectTimerId;
+
       genesysService.subscribeToGenesysReconnected(() => {
         hasReconnectedRef.current = true;
         setIsOffline(false);
-        setTimeout(() => {
+        reconnectTimerId = setTimeout(() => {
           setMessages((prevMessages) => setReconnectedBanner(prevMessages, onlineText));
         }, 10);
       });
+
+      return () => clearTimeout(reconnectTimerId);
     }
   }, [genesysIsReady, setIsOffline, setMessages, offlineText, onlineText, hasReconnectedRef]);
 
@@ -126,9 +142,16 @@ export function useGenesysSubscriptions({
     if (genesysIsReady) {
       genesysService.subscribeToGenesysOldMessages(
         (historicalMessages) => {
-          const currentHistorialMessages = setHideContentToHistoricalMessages(historicalMessages.messages);
-          setHistoricalMessages((prevMessages) => [...prevMessages, ...currentHistorialMessages]);
-          mergeChatHistory(currentHistorialMessages);
+
+          // Store original historical message batch size as it was delivered
+          setLastHistoryBatchCount(historicalMessages.messages.length);
+
+          const mappedMessages = mapHistoricalMessagesToStandardMessageFormat(
+            setHideContentToHistoricalMessages(historicalMessages.messages)
+          );
+
+          setHistoricalMessages((prevMessages) => [...prevMessages, ...mappedMessages]);
+          mergeChatHistory(mappedMessages);
         },
         () => setAllHistoryFetched(true)
       );
@@ -144,6 +167,10 @@ export function useGenesysSubscriptions({
   useEffect(() => {
     if (genesysIsReady) {
       genesysService.subscribeToSessionRestored((historicalMessages) => {
+
+        // Store original historical message batch size as it was delivered
+        setLastHistoryBatchCount(historicalMessages.messages.length);
+
         /**
          * If page is refreshed this will assign hideContent 
          * property to recieved old messages from Genesys.
@@ -152,7 +179,22 @@ export function useGenesysSubscriptions({
          * the user has not lost connection and reconnected.
          */
         if (!hasReconnectedRef.current) {
-          const currentHistorialMessages = setHideContentToHistoricalMessages(historicalMessages.messages);
+
+          // Normalize & map each restored message before merging
+          const normalizedMessages = historicalMessages.messages.map(message => ({
+            ...message,
+            // Ensure ID always exists for stable sort tie‑breaking
+            id: message.id
+              ?? message.metadata?.id
+              ?? message.channel?.messageId
+              ?? crypto.randomUUID(),
+
+            // Ensure timestamp always exists and is consistently shaped
+            timestamp: message.timestamp || message.channel?.time,
+          }));
+
+
+          const currentHistorialMessages = setHideContentToHistoricalMessages(normalizedMessages);
           setHistoricalMessages((prevMessages) => [...prevMessages, ...currentHistorialMessages]);
           mergeChatHistory(currentHistorialMessages);
           setShouldScrollToLatestMessage(true);
@@ -168,13 +210,25 @@ export function useGenesysSubscriptions({
    * is removed when the agent has stopped typing. 
    */
   useEffect(() => {
-    const onAgentTyping = () => {
-      setAgentIsTyping(true);
-      setMessages((prevMessages) => setAgentConnectedBanner(prevMessages, agentConnectedText));
-    };
-    genesysService.subscribeAgentTyping(onAgentTyping);
-    genesysService.unSubscribeAgentTyping(() => setAgentIsTyping(false));
-  }, [setAgentIsTyping, setMessages, agentConnectedText]);
+    if (genesysIsReady) {
+      const onAgentTyping = () => {
+        setAgentIsTyping(true);
+        setMessages((prevMessages) => {
+          const safePrevious = Array.isArray(prevMessages) ? prevMessages : [];
+
+          // Show connected banner ONLY ONCE per agent session
+          if (shouldShowAgentConnectedBanner(hasShownConnectedBanner)) {
+            hasShownConnectedBanner.current = true;
+            return setAgentConnectedBanner(safePrevious, agentConnectedText);
+          } else {
+            return [...safePrevious];
+          }
+        });
+      }
+      genesysService.subscribeAgentTyping(onAgentTyping);
+      genesysService.unSubscribeAgentTyping(() => setAgentIsTyping(false));
+    }
+  }, [genesysIsReady, setAgentIsTyping, setMessages, agentConnectedText]);
 
   /**
    * Subscribe to Genesys errors once the SDK is ready.
@@ -185,3 +239,4 @@ export function useGenesysSubscriptions({
     }
   }, [genesysIsReady, setIsErrorState]);
 }
+

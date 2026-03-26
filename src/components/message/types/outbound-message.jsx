@@ -1,43 +1,39 @@
 import MessageMetaData from '../message-meta';
 import MessageText from '../message-text';
-import { formatDate } from '../../../utils/index';
+import MessageWrapper from '../delegates/message-wrapper';
 import StructuredMessage from './structured-message';
 
-export default function OutboundTextMessage({ 
-  message, 
+function resolveMetaDisplay(message, botMetaDisplay) {
+  return message.channel?.from?.nickname ?? botMetaDisplay ?? 'Digital assistant';
+}
+
+export default function OutboundTextMessage({
+  message,
+  isLast,
+  lastMessageRef,
   handleQuickReply,
   utmParam,
   botMetaDisplay
 }) {
-  const formattedTime = formatDate(message.channel.time);
-  const metaDisplay = (message.hasOwnProperty('channel') &&
-      message.channel.hasOwnProperty('from') &&
-      message.channel.from.hasOwnProperty('nickname')) ?
-    message.channel.from.nickname : botMetaDisplay || 'Digital assistant';
+
+  const timestamp = message.channel?.time || message.timestamp;
   return (
-    <div className='outbound-message-wrapper'
-      role="article"
-      aria-label="Outbound message"
-      data-testid="outbound-message">
+    <MessageWrapper isLast={isLast} lastMessageRef={lastMessageRef}>
+      <div className='outbound-message-wrapper'
+        role="article"
+        aria-label="Outbound message"
+        data-testid="outbound-message-wrapper">
 
-      <MessageText
-        messageType='Outbound'
-        text={message.text} 
-        utmParam={utmParam}
-      />
+        <MessageText messageType='Outbound' text={message.text} utmParam={utmParam} />
+        <MessageMetaData
+          metaDataType='Outbound'
+          messageTimeStamp={timestamp}
+          metaDisplay={resolveMetaDisplay(message, botMetaDisplay)} />
 
-      <MessageMetaData
-        metaDataType='Outbound'
-        messageTimeStamp={formattedTime}
-        metaDisplay={metaDisplay} />
-
-      {
-        message.type === 'Structured' &&
-            !message.content.hideContent &&
-            <StructuredMessage
-              contents={message.content}
-              handleQuickReply={handleQuickReply} />
-      }
-    </div>
+        {message.type === 'Structured' && !message.hideContent &&
+          <StructuredMessage contents={message.content} handleQuickReply={handleQuickReply} />
+        }
+      </div>
+    </MessageWrapper>
   );
 }

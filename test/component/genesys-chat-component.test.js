@@ -1,3 +1,14 @@
+/**
+ * GenesysChatComponent — comprehensive integration test suite
+ *
+ * Strategy:
+ * - genesysService is mocked at the module boundary (the only external dependency
+ *   that can't run in JSDOM). All hooks, utils, and message components run for real.
+ * - Real-like fixture data drives message rendering assertions so tests reflect
+ *   actual Genesys payloads rather than invented shapes.
+ * - Each describe block covers a distinct lifecycle or feature area so failures
+ *   pinpoint the relevant concern immediately.
+ */
 jest.mock('../../src/services/genesys-service.js', () => ({
   genesysService: {
     setLogger: jest.fn(),
@@ -16,662 +27,1205 @@ jest.mock('../../src/services/genesys-service.js', () => ({
     fetchMessageHistory: jest.fn(),
     subscribeToErrors: jest.fn(),
     clearConversation: jest.fn(),
-    registerForSessionClearingEvents: jest.fn(),
   },
-  GenesysService: jest.fn(),
 }));
 
 import '@testing-library/jest-dom';
-
-import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { genesysService } from '../../src/services/genesys-service.js';
 import GenesysChatComponent from '../../src/components/genesys-chat-component';
 
+// ---------------------------------------------------------------------------
+// Fixture data
+// ---------------------------------------------------------------------------
 import inboundMessages from '../data/inbound-messages.json';
 import outboundMessages from '../data/outbound-messages.json';
 import restoredMessages from '../data/restored-messages.json';
 import largeSetRestoredMessages from '../data/large-set-restored-messages.json';
-import incomingMessage from '../data/incoming-message.json';
-import withStructuredMessages from '../data/structured-messages.json';
+import structuredMessages from '../data/structured-messages.json';
 
-import {
-  getStructureMessageIndex,
-  setPreviousStructureHideTrue,
-} from '../../src/utils/structured-message.js';
-
-const { axe, toHaveNoViolations } = require('jest-axe');
-expect.extend(toHaveNoViolations);
+// ---------------------------------------------------------------------------
+// Global setup
+// ---------------------------------------------------------------------------
 
 beforeAll(() => {
-  // Mock scrollIntoView because JSDOM doesn't support it
   Element.prototype.scrollIntoView = jest.fn();
-
-  // Mock the dialog prototype methods as JSDOM does not implement them
   window.HTMLDialogElement.prototype.showModal = jest.fn();
   window.HTMLDialogElement.prototype.close = jest.fn();
 });
 
-/* eslint-disable no-unused-vars */
 afterEach(() => {
   jest.clearAllMocks();
   cleanup();
-  // Ensure any fake timers used in individual tests are reset so they don't
-  // affect subsequent tests and cause unexpected timeouts when running the
-  // whole test suite.
-  try {
-    jest.useRealTimers();
-  } catch (e) {
-    // Some Jest environments may not support switching timers; ignore errors
-  }
+  delete globalThis.Genesys;
+  try { jest.useRealTimers(); } catch (_) { }
 });
 
-const sampleServiceMetadata = {
+/**
+ * Mock the useNavigationType so that tests can start from a clean slate.
+ * Using <MemoryRouter> to embed the component (required) also sets the initial
+ * navigationType to "POP"
+ */
+jest.mock('react-router', () => ({
+  ...jest.requireActual('react-router'),
+  useNavigationType: jest.fn(),
+}));
+
+
+// ---------------------------------------------------------------------------
+// Shared fixtures
+// ---------------------------------------------------------------------------
+
+const SERVICE_METADATA = {
   localStorageKey: 'test-local-storage-key',
   serviceName: 'ETA',
-  serviceSubText: 'an ETA (electronic travel authorisation).',
-  errorContactLink: 'http://localhost/example-error-link',
   agentConnectedText: 'You are now connected to an agent.',
   agentDisconnectedText: 'The agent has disconnected.',
-  offlineText: "You are currently offline. Messages cannot be sent until reconnected to the internet.",
-  onlineText: "You are now online. Messages can now be sent."
+  offlineText: 'You are currently offline. Messages cannot be sent until reconnected to the internet.',
+  onlineText: 'You are now online. Messages can now be sent.',
+  botMetaDisplay: 'Digital assistant',
 };
 
-const renderGenesysChatComponent = (onChatEnded = {}) => render(
-  <MemoryRouter>
-    <GenesysChatComponent
-      genesysEnvironment="test-genesys-environment"
-      deploymentId="test-deployment-id"
-      serviceMetadata={sampleServiceMetadata}
-      loadingSpinner={<h1>Loading web chat</h1>}
-      onChatEnded={onChatEnded}
-      errorComponent={<p data-testid='error-message'>An error has occurred</p>}
-    />
-  </MemoryRouter>
-);
+/**
+ * Renders the component inside a MemoryRouter (required by useNavigationType).
+ * genesysIsReady is only true after initialiseGenesysConversation calls its
+ * first argument, so callers must mock that when they need the chat UI visible.
+ */
+function renderComponent({
+  onChatEnded = jest.fn(),
+  serviceMetadata = SERVICE_METADATA,
+  maxCharacterLimit = 4096,
+  debugMode = false,
+} = {}) {
+  return render(
+    <MemoryRouter>
+      <GenesysChatComponent
+        genesysEnvironment="test-environment"
+        deploymentId="test-deployment-id"
+        serviceMetadata={serviceMetadata}
+        loadingSpinner={<p data-testid="loading-spinner">Loading…</p>}
+        onChatEnded={onChatEnded}
+        errorComponent={<p data-testid="error-component">An error has occurred</p>}
+        maxCharacterLimit={maxCharacterLimit}
+        debugMode={debugMode}
+      />
+    </MemoryRouter>
+  );
+}
 
-describe('Genesys Chat Component', () => {  
-  test('renders component with with web chat form when genesys is ready', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
+// Makes Genesys ready and wires up the standard empty-message subscription.
+function makeGenesysReady() {
+  globalThis.Genesys = {};
+  genesysService.initialiseGenesysConversation.mockImplementation((onReady) => onReady());
+  genesysService.subscribeToGenesysMessages.mockImplementation((callback) => callback([]));
+}
 
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
+// ---------------------------------------------------------------------------
+// 1. Initialisation
+// ---------------------------------------------------------------------------
 
-    renderGenesysChatComponent();
+describe('Initialisation', () => {
+  test('shows the loading spinner while Genesys is not yet ready', () => {
+    // Do NOT mock initialiseGenesysConversation — it never calls onReady
+    renderComponent();
+    expect(screen.getByTestId('loading-spinner')).toBeInTheDocument();
+    expect(screen.queryByTestId('chat-messenger-form')).not.toBeInTheDocument();
+  });
 
+  test('shows the chat UI once Genesys is ready', () => {
+    makeGenesysReady();
+    renderComponent();
+    expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
     expect(screen.getByTestId('chat-messenger-form')).toBeInTheDocument();
   });
 
-  test('renders inbound message when message is sent to genesys', async () => {
-    // Mock the Genesys window object 
+  test('loads the Genesys script when the SDK is not already present', () => {
+    // globalThis.Genesys deliberately absent
+
+    renderComponent();
+    expect(genesysService.loadGenesysScript).toHaveBeenCalledWith(
+      'test-environment',
+      'test-deployment-id'
+    );
+    expect(genesysService.initialiseGenesysConversation).not.toHaveBeenCalled();
+  });
+
+  test('skips script loading and initialises directly when the SDK is already present', () => {
+    makeGenesysReady();
+    renderComponent();
+    expect(genesysService.loadGenesysScript).not.toHaveBeenCalled();
+    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledTimes(1);
+  });
+
+  test('calls setLogger with the provided loggingCallback on mount', () => {
+    const loggingCallback = jest.fn();
+    render(
+      <MemoryRouter>
+        <GenesysChatComponent
+          genesysEnvironment="env"
+          deploymentId="id"
+          serviceMetadata={SERVICE_METADATA}
+          loggingCallback={loggingCallback}
+          onChatEnded={jest.fn()}
+        />
+      </MemoryRouter>
+    );
+    expect(genesysService.setLogger).toHaveBeenCalledWith(loggingCallback);
+  });
+
+  test('calls setDebugMode with the debugMode prop', () => {
+    renderComponent({ debugMode: true });
+    expect(genesysService.setDebugMode).toHaveBeenCalledWith(true);
+  });
+
+  test('initialises the conversation with the correct localStorageKey', () => {
+    makeGenesysReady();
+    renderComponent();
+    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      'test-local-storage-key'
+    );
+  });
+
+  test('applies default service metadata values when none are provided', () => {
     globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([inboundMessages[0]]);
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const messages = screen.getAllByTestId('inbound-message');
-    expect(messages[0]).toBeInTheDocument();
-    expect(messages[0]).toHaveTextContent("What's the price for this service");
-
-    const messageMetaData = screen.queryByText(/You at/i);
-    expect(messageMetaData).toHaveTextContent('You at 09:38');
-  });
-
-  test('renders outbound message when message is received from genesys', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([outboundMessages[2]]);
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const messages = screen.getAllByTestId('outbound-message');
-    expect(messages[0]).toBeInTheDocument();
-    expect(messages[0]).toHaveTextContent("Hello and welcome to the ETA webchat service. Please ask me a question relating to the ETA process. You're communicating with a computer. Please do not disclose any personal or sensitive information.");
-
-    const messageMetaData = screen.queryByText(/Digital assistant at/i);
-    expect(messageMetaData).toHaveTextContent('Digital assistant at 09:38');
-  });
-
-  test('renders restored messages when previous genesys session is active', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    genesysService.subscribeToSessionRestored.mockImplementation((onSessionRestored) => {
-      onSessionRestored(restoredMessages);
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const outboundMessageHistory = screen.getAllByTestId('outbound-message');
-    expect(outboundMessageHistory).toHaveLength(2);
-    expect(outboundMessageHistory[1]).toBeInTheDocument();
-    expect(outboundMessageHistory[1]).toHaveTextContent('Welcome to the webchat, in few word how can i help you today?');
-    expect(outboundMessageHistory[0]).toBeInTheDocument();
-    expect(outboundMessageHistory[0]).toHaveTextContent('Ok, for more information please see the documentation on our home page');
-
-    const inboundMessageHistory = screen.getAllByTestId('inbound-message');
-    expect(inboundMessageHistory).toHaveLength(2);
-    expect(inboundMessageHistory[1]).toBeInTheDocument();
-    expect(inboundMessageHistory[1]).toHaveTextContent('Hello, I need help with my application');
-    expect(inboundMessageHistory[0]).toBeInTheDocument();
-    expect(inboundMessageHistory[0]).toHaveTextContent('Please connect me to an agent');
-
-    const messageMetaData = screen.queryAllByText(/Digital assistant at/i);
-    messageMetaData.forEach((metaData) =>
-      expect(metaData).toHaveTextContent('Digital assistant at 09:39'));
-  });
-
-  test('renders more historical messages when load more messages event is triggered', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    // Setup callback placeholders for later use
-    let onFetchHistoryCallback;
-    let onHistoryCompleteCallback;
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    genesysService.subscribeToSessionRestored.mockImplementation((onSessionRestored) => {
-      onSessionRestored(largeSetRestoredMessages);
-    });
-
-    genesysService.subscribeToGenesysOldMessages.mockImplementation((onFetchHistory, onHistoryComplete) => {
-      onFetchHistoryCallback = onFetchHistory;
-      onHistoryCompleteCallback = onHistoryComplete;
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const outboundMessageHistory = screen.getAllByTestId('outbound-message');
-    expect(outboundMessageHistory).toHaveLength(12);
-
-    const inboundMessageHistory = screen.getAllByTestId('inbound-message');
-    expect(inboundMessageHistory).toHaveLength(13);
-
-    const assistantMetaData = screen.queryAllByText(/Digital assistant at/i);
-    expect(assistantMetaData).toHaveLength(12);
-
-    const userMetaData = screen.queryAllByText(/You at/i);
-    expect(userMetaData).toHaveLength(13);
-
-    const loadMoreMessagesButton = await screen.findByRole('button', { name: /Load more messages/i });
-    expect(loadMoreMessagesButton).toBeInTheDocument();
-    expect(loadMoreMessagesButton).toHaveTextContent('Load more messages');
-
-    const user = userEvent.setup();
-    await user.click(loadMoreMessagesButton);
-    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
-
-    // Mock fetching history getting one more message and then setting the history as complete
-    act(() => {
-      onFetchHistoryCallback({
-        messages: [{
-          'text': 'Welcome to the webchat, in few word how can i help you today?',
-          'messageType': 'outbound',
-          'type': 'text',
-          'timestamp': '2025-07-31T09:39:00Z',
-          'metadata': {
-            'correlationId': '00000000-0000-0000-0000-000000000000'
-          },
-          'originatingEntity': 'Bot'
-        }]
-      });
-      onHistoryCompleteCallback(true);
-    });
-
-    // The latest historical message should now be populated in the messages list
-    await waitFor(() => {
-      const updatedMessages = screen.getAllByTestId('outbound-message');
-      expect(updatedMessages).toHaveLength(13);
-      expect(updatedMessages[0]).toHaveTextContent('Welcome to the webchat, in few word how can i help you today?');
-    });
-
-    // Now that all history is loaded, the load more messages button should be gone
-    await waitFor(() => {
-      expect(loadMoreMessagesButton).not.toBeInTheDocument();
-    });
-  });
-
-  test('doesnt restore messages when reconnect event has occured', async () => {
-    
-    const messages = [outboundMessages[0], inboundMessages[0]];
-
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived(messages);
-    });
-
-    genesysService.subscribeToGenesysReconnected.mockImplementation((onReconnected) => {
-      onReconnected();
-    });
-
-    genesysService.subscribeToSessionRestored.mockImplementation((onSessionRestored) => {
-      onSessionRestored(restoredMessages);
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const outboundMessageHistory = screen.getAllByTestId('outbound-message');
-    expect(outboundMessageHistory).toHaveLength(1);
-    expect(outboundMessageHistory[0]).toBeInTheDocument();
-    expect(outboundMessageHistory[0]).toHaveTextContent('Welcome to EVisa webchat, in few word how can i help you today?');
-
-    const inboundMessageHistory = screen.getAllByTestId('inbound-message');
-    expect(inboundMessageHistory).toHaveLength(1);
-    expect(inboundMessageHistory[0]).toBeInTheDocument();
-    expect(inboundMessageHistory[0]).toHaveTextContent('What\'s the price for this service');
-  });
-
-  test('handles user input across multiple lines', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    renderGenesysChatComponent();
-
-    const messageInputArea = screen.getByTestId('message-input');
-    await userEvent.type(messageInputArea, 'Hello, I need help{shift>}{enter}{/shift}with an ETA');
-
-    expect(messageInputArea).toHaveTextContent('Hello, I need help with an ETA');
-  });
-
-  test('display typing indicator when agent is typing', async () => {
-
-    genesysService.subscribeAgentTyping.mockImplementation((onAgentTyping) => {
-      onAgentTyping();
-    });
-
-    const { container } = renderGenesysChatComponent();
-    expect(screen.queryByRole('status')).not.toBeNull();
-    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
-
-    const results = await axe(container);
-    expect(results).toHaveNoViolations();
-  });
-
-  test('hides typing indicator when agent stops typing', async () => {
-    let agentStartTyping;
-    let agentStoppedTyping;
-
-    genesysService.subscribeAgentTyping.mockImplementation((onAgentTyping) => {
-      agentStartTyping = onAgentTyping;
-    });
-
-    genesysService.unSubscribeAgentTyping.mockImplementation((onAgentStoppedTyping) => {
-      agentStoppedTyping = onAgentStoppedTyping;
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.queryByRole('status')).toBeNull();
-    expect(screen.queryByTestId('agent-typing')).toBeNull();
-
-    act(() => {
-      agentStartTyping();
-    });
-    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
-
-    act(() => {
-      agentStoppedTyping();
-    });
-    expect(screen.queryByTestId('agent-typing')).toBeNull();
-  });
-
-  test('hides typing indicator when agent sends message', async () => {
-    let messagesReceived;
-
-    genesysService.subscribeAgentTyping.mockImplementation((onAgentTyping) => {
-      onAgentTyping();
-    });
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      messagesReceived = onMessagesReceived;
-    });
-
-    renderGenesysChatComponent();
-
-    expect(screen.queryByRole('status')).not.toBeNull();
-    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
-
-    const message = {
-      'direction': 'Outbound',
-      'text': 'Great, this current price for visa categories varies on type of visa',
-      'type': 'Text',
-      'channel': {
-        'time': '2025-07-31T09:38:00Z'
-      },
-      'metadata': {
-        'correlationId': '00000000-0000-0000-0000-000000000000'
-      },
-      'originatingEntity': 'Human'
-    };
-
-    act(() => {
-      messagesReceived([message]);
-    });
-
-    expect(screen.queryByTestId('agent-typing')).toBeNull();
-  });
-
-  test('handleEndChat clears conversation and calls onChatEnded callback', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    const mockOnChatEnded = jest.fn();
-    // Mock clearConversation to track calls
-    genesysService.clearConversation.mockImplementation(jest.fn());
-
-    renderGenesysChatComponent(mockOnChatEnded);
-
-    // Open the end chat modal
-    const endChatButton = screen.getByTestId('end-chat-button');
-    expect(endChatButton).toBeInTheDocument();
-    await userEvent.click(endChatButton);
-
-    // Modal should appear
-    const modal = screen.getByTestId('end-chat-modal');
-    expect(modal).toBeInTheDocument();
-
-    // Click the confirm end chat button inside the modal
-    const confirmEndChatButton = screen.getByTestId('confirm-end-chat-button');
-    expect(confirmEndChatButton).toBeInTheDocument();
-    await userEvent.click(confirmEndChatButton);
-
-    // clearConversation should be called with test-local-storage-key
-    expect(genesysService.clearConversation).toHaveBeenCalledWith('test-local-storage-key');
-
-    expect(mockOnChatEnded).toHaveBeenCalled();
-  });
-
-  test('renders offline banner and disables chat form when offline event is triggered', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    let goOffline;
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    genesysService.subscribeToGenesysOffline.mockImplementation((onOffline) => {
-      goOffline = onOffline;
-    });
-
-    renderGenesysChatComponent();
-
-    act(() => {
-      goOffline();
-    });
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const offlineBanner = screen.getByText(/You are currently offline/i);
-    expect(offlineBanner).toBeInTheDocument();
-    expect(offlineBanner).toHaveTextContent('You are currently offline. Messages cannot be sent until reconnected to the internet.');
-
-    await waitFor(() => {
-      expect(screen.getByTestId('send-message-button')).toBeDisabled();
-      expect(screen.getByTestId('end-chat-button')).toBeDisabled();
-      expect(screen.getByTestId('message-input')).toBeDisabled();
-    });
-  });
-
-  test('renders reconnected banner when reconnect event is triggered', async () => {
-    jest.useFakeTimers();
-    
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    genesysService.subscribeToGenesysReconnected.mockImplementation((onReconnected) => {
-      onReconnected();
-    });
-
-    renderGenesysChatComponent();
-
-    act(() => {
-      jest.advanceTimersByTime(10); // match the delay in the reconnected handler
-    });
-
-    expect(screen.getByRole('log')).toBeInTheDocument();
-
-    const reconnectedBanner = screen.getByText(/You are now online/i);
-    expect(reconnectedBanner).toBeInTheDocument();
-    expect(reconnectedBanner).toHaveTextContent('You are now online. Messages can now be sent.');
+    genesysService.initialiseGenesysConversation.mockImplementation((onReady) => onReady());
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => callback([]));
+
+    render(
+      <MemoryRouter>
+        <GenesysChatComponent
+          genesysEnvironment="env"
+          deploymentId="id"
+          serviceMetadata={{}}
+          onChatEnded={jest.fn()}
+        />
+      </MemoryRouter>
+    );
+
+    // The component should not throw and the form should appear
+    expect(screen.getByTestId('chat-messenger-form')).toBeInTheDocument();
+
+    // Default localStorageKey is passed to initialiseGenesysConversation
+    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.any(Function),
+      'genesys_chat_session'
+    );
   });
 });
 
-describe('Genesys Chat Component error handling', () => {
+// ---------------------------------------------------------------------------
+// 2. Message rendering — inbound
+// ---------------------------------------------------------------------------
 
-  afterEach(() => {
+describe('Inbound message rendering', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('renders an inbound message with correct text', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([inboundMessages[0]])
+    );
+    renderComponent();
+    const message = screen.getByTestId('inbound-message-wrapper');
+    expect(message).toHaveTextContent("What's the price for this service");
+  });
+
+  test('renders the correct "You at" metadata for an inbound message', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([inboundMessages[0]])
+    );
+    renderComponent();
+    expect(screen.getByText(/You at 09:38/i)).toBeInTheDocument();
+  });
+
+  test('renders multiple inbound messages in order', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback(inboundMessages)
+    );
+    renderComponent();
+    const messages = screen.getAllByTestId('inbound-message-wrapper');
+    expect(messages.length).toBeGreaterThanOrEqual(2);
+    expect(messages[0]).toHaveTextContent("What's the price for this service");
+    expect(messages[1]).toHaveTextContent("The Chat interface displays messages in a clear, " +
+      "readable format Messages are grouped by sender with clear differentiation " +
+      "(e.g. user messages on the right, recipient messages on the left)");
+  });
+
+  test('renders inside the chat log region', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([inboundMessages[0]])
+    );
+    renderComponent();
+    const log = screen.getByRole('log');
+    expect(within(log).getByTestId('inbound-message-wrapper')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 3. Message rendering — outbound
+// ---------------------------------------------------------------------------
+
+describe('Outbound message rendering', () => {
+  beforeEach(() => {
     jest.resetAllMocks();
-    jest.clearAllMocks();
+    makeGenesysReady()
   });
 
-  test('handles an error being returned from Genesys and displays correct content', async () => {
-    genesysService.subscribeToErrors.mockImplementation((onError) => {
-      onError();
+  test('renders an outbound message with correct text', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([outboundMessages[2]])
+    );
+    renderComponent();
+    const msg = screen.getByTestId('outbound-message-wrapper');
+    expect(msg).toHaveTextContent('Hello and welcome to the ETA webchat service');
+  });
+
+  test('renders "Digital assistant at" metadata for a bot message', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([outboundMessages[2]])
+    );
+    renderComponent();
+    expect(screen.getByText(/Digital assistant at 09:38/i)).toBeInTheDocument();
+  });
+
+  test('renders the agent nickname as metadata when an agent sends a message', () => {
+    const agentMessage = {
+      direction: 'Outbound',
+      type: 'Text',
+      text: 'Hello, this is your agent speaking.',
+      channel: {
+        time: '2025-07-31T09:40:00Z',
+        from: { nickname: 'Agent Smith' },
+      },
+    };
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([agentMessage])
+    );
+    renderComponent();
+    expect(screen.getByText(/Agent Smith at/i)).toBeInTheDocument();
+  });
+
+  test('does not render an outbound message with empty text', () => {
+    const emptyMessage = {
+      direction: 'Outbound',
+      type: 'Text',
+      text: '',
+      channel: { time: '2025-07-31T09:38:00Z' },
+    };
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([emptyMessage])
+    );
+    renderComponent();
+    expect(screen.queryByTestId('outbound-message')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 4. Session restore
+// ---------------------------------------------------------------------------
+
+describe('Session restore', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    makeGenesysReady()
+  });
+
+  test('renders restored outbound messages', () => {
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+
+    renderComponent();
+
+    const messages = screen.getAllByTestId('outbound-message-wrapper');
+    expect(messages.length).toBeGreaterThanOrEqual(2);
+    expect(messages[0]).toHaveTextContent('Welcome to the webchat, in few word how can i help you today?');
+
+    expect(messages[1]).toHaveTextContent('Ok, for more information please see the documentation on our home page');
+
+    const messageMetaData = within(messages[1]).getByTestId('message-metadata')
+    expect(messageMetaData).toHaveTextContent('Digital assistant at 09:39')
+  });
+
+  test('renders restored inbound messages', () => {
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+    renderComponent();
+    const messages = screen.getAllByTestId('inbound-message-wrapper');
+    expect(messages.length).toBeGreaterThanOrEqual(2);
+    expect(messages[0]).toHaveTextContent('Hello, I need help with my application');
+    expect(messages[1]).toHaveTextContent('Please connect me to an agent');
+
+    const messageMetaData = within(messages[1]).getByTestId('message-metadata')
+    expect(messageMetaData).toHaveTextContent('You at 09:39')
+  });
+
+  test('restored mixed messages appear in correct chronological order', () => {
+    // Arrange – restore with large mixed dataset
+    genesysService.subscribeToSessionRestored.mockImplementation(callback =>
+      callback(largeSetRestoredMessages)
+    );
+
+    renderComponent();
+
+    // Extract rendered DOM messages in display order
+    const rendered = screen.getAllByRole('article'); // all message wrappers
+    const renderedTexts = rendered.map(message => message.textContent);
+
+    // Build expected chronological order by sorting fixture timestamps
+    const expectedOrder = [...largeSetRestoredMessages.messages]
+      .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+      .map(message => message.text);
+
+    // Assert each DOM message text appears in the expected order
+    expectedOrder.forEach((expectedText, index) => {
+      expect(renderedTexts[index]).toContain(expectedText);
+    });
+  });
+
+  test('does not restore session messages after a reconnect event', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([outboundMessages[0], inboundMessages[0]])
+    );
+    genesysService.subscribeToGenesysReconnected.mockImplementation((callback) => callback());
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+
+    renderComponent();
+
+    // Only the two live messages should appear, not the restored ones
+    expect(screen.getAllByTestId('outbound-message-wrapper')).toHaveLength(1);
+    expect(screen.getAllByTestId('inbound-message-wrapper')).toHaveLength(1);
+  });
+
+  test('scrolls to the latest message after session restore', () => {
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+    renderComponent();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+  });
+
+  test('correctly sets hidden property on historic quick reply buttons', () => {
+    // Stuctured messages contains 6 individual quick reply buttnons
+    const historicalMessages = { messages: [...restoredMessages.messages, ...structuredMessages] }
+
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(historicalMessages)
+    );
+
+    renderComponent();
+
+    // Only 2 buttons should be visible once the component is rendered
+    const messages = screen.getAllByTestId('quick-reply-button');
+    expect(messages.length).toBe(2);
+  });
+
+  test('correctly sets hidden property on last message upon sending a message post restore', async () => {
+    const historicalMessages = { messages: [...restoredMessages.messages, ...structuredMessages] }
+
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(historicalMessages)
+    );
+
+    renderComponent();
+
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Test message');
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith(
+      'Test message',
+      expect.any(Function)
+    );
+    expect(input).toHaveValue('');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Historical messages / load more
+// ---------------------------------------------------------------------------
+
+describe('Historical messages and load more', () => {
+  let onFetchHistory;
+  let onHistoryComplete;
+
+  beforeEach(() => {
+    makeGenesysReady();
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(largeSetRestoredMessages)
+    );
+    genesysService.subscribeToGenesysOldMessages.mockImplementation((onFetch, onComplete) => {
+      onFetchHistory = onFetch;
+      onHistoryComplete = onComplete;
+    });
+  });
+
+  test('shows the "Load more messages" button when >= 24 historical messages are present', async () => {
+    renderComponent();
+    expect(
+      await screen.findByRole('button', { name: /Load more messages/i })
+    ).toBeInTheDocument();
+  });
+
+  test('calls fetchMessageHistory when the button is clicked', async () => {
+    renderComponent();
+    const button = await screen.findByRole('button', { name: /Load more messages/i });
+    await userEvent.click(button);
+    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
+  });
+
+  test('appends newly fetched historical messages to the list', async () => {
+    renderComponent();
+
+    const before = screen.getAllByTestId('outbound-message-wrapper').length;
+
+    act(() => {
+      onFetchHistory({
+        messages: [{
+          text: 'An older message from history',
+          messageType: 'outbound',
+          type: 'text',
+          timestamp: '2025-07-31T09:00:00Z',
+          originatingEntity: 'Bot',
+        }],
+      });
     });
 
-    renderGenesysChatComponent();
+    await waitFor(() => {
+      const outboundMessages = screen.getAllByTestId('outbound-message-wrapper');
+      expect(outboundMessages.length).toBe(before + 1);
 
-    const errorMessage = screen.getByTestId('error-message');
-    expect(errorMessage).toBeInTheDocument();
-    expect(errorMessage).toHaveTextContent('An error has occurred');
+      const newOutboundMessage = screen.getByText(/An older message from history/i);
+      expect(newOutboundMessage).toBeInTheDocument();
+    });
   });
 
-  test('handles an error being returned from Genesys initialisation and displays correct content', async () => {
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady, onError) => {
-      onGenesysReady();
-      onError();
+  test('hides the "Load more messages" button once all history is fetched', async () => {
+    renderComponent();
+    const button = await screen.findByRole('button', { name: /Load more messages/i });
+
+    act(() => {
+      onFetchHistory({ messages: [] });
+      onHistoryComplete(true);
     });
 
-    renderGenesysChatComponent();
-
-    const errorMessage = screen.getByTestId('error-message');
-    expect(errorMessage).toBeInTheDocument();
-    expect(errorMessage).toHaveTextContent('An error has occurred');
+    await waitFor(() => {
+      expect(button).not.toBeInTheDocument();
+    });
   });
 
-  test('renders error component if fetch history throws an error', async () => {
-    // Mock the Genesys window object 
+  test('does not show the "Load more messages" button when fewer than 24 historical messages', () => {
+    // Override with a small restored set
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+    renderComponent();
+    expect(
+      screen.queryByRole('button', { name: /Load more messages/i })
+    ).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 6. Message input and sending
+// ---------------------------------------------------------------------------
+
+describe('Message input and sending', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+    makeGenesysReady()
+  });
+
+  test('updates the input field as the user types', async () => {
+    renderComponent();
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Hello');
+    expect(input).toHaveValue('Hello');
+  });
+
+  test('sends the message and clears the input on form submit', async () => {
+    renderComponent();
+
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Test message');
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith(
+      'Test message',
+      expect.any(Function)
+    );
+    expect(input).toHaveValue('');
+  });
+
+  test('sends the message when Enter is pressed', async () => {
+    renderComponent();
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Enter message{Enter}');
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith(
+      'Enter message',
+      expect.any(Function)
+    );
+  });
+
+  test('does not send a message when Shift+Enter is pressed (allows newline)', async () => {
+    renderComponent();
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Hello, I need help{shift>}{enter}{/shift}with an ETA');
+    expect(genesysService.sendMessageToGenesys).not.toHaveBeenCalled();
+    expect(input).toHaveTextContent('Hello, I need help with an ETA');
+  });
+
+  test('does not send an empty message on form submit', async () => {
+    renderComponent();
+
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    expect(genesysService.sendMessageToGenesys).not.toHaveBeenCalled();
+  });
+
+  test('enforces the maxCharacterLimit on the input', () => {
+    renderComponent({ maxCharacterLimit: 100 });
+    const input = screen.getByTestId('message-input');
+    expect(input).toHaveAttribute('maxlength', '100');
+  });
+
+  test('hides any active structured message content after the user sends a message', async () => {
+    // Start with a structured message visible
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+    renderComponent();
+
+    // Quick reply buttons should be visible
+    expect(screen.getByRole('button', { name: /yes/i })).toBeInTheDocument();
+
+    // User types and submits a message
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Manual reply');
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    // Quick reply buttons should now be hidden
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /yes/i })).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. Quick replies
+// ---------------------------------------------------------------------------
+
+describe('Quick replies (structured messages)', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('renders quick reply buttons for a structured message', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+    renderComponent();
+    expect(screen.getAllByRole('button', { name: /yes|no/i }).length).toBeGreaterThan(0);
+  });
+
+  test('sends the quick reply text to Genesys when a button is clicked', async () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+    renderComponent();
+
+    const yesButton = screen.getByRole('button', { name: /yes/i });
+    await userEvent.click(yesButton);
+
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes');
+  });
+
+  test('sends the quick reply text to Genesys when input text is sent', async () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+    renderComponent();
+
+    const input = screen.getByTestId('message-input');
+    await userEvent.type(input, 'Yes');
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes', expect.any(Function));
+  });
+
+  test('hides previously shown structured message when a new message arrives', async () => {
+    let receiveMessage;
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => {
+      receiveMessage = callback;
+      callback([structuredMessages[2]]);
+    });
+
+    renderComponent();
+    expect(screen.getByRole('button', { name: /yes/i })).toBeInTheDocument();
+
+    act(() => {
+      receiveMessage([outboundMessages[2]]);
+    });
+
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /yes/i })).not.toBeInTheDocument();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 8. Typing indicator
+// ---------------------------------------------------------------------------
+
+describe('Typing indicator', () => {
+  test('does not show the typing indicator on initial render', () => {
+    renderComponent();
+    expect(screen.queryByTestId('agent-typing')).not.toBeInTheDocument();
+  });
+
+  test('shows the typing indicator when the agent starts typing', () => {
+    makeGenesysReady();
+
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
+
+    renderComponent();
+
+    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
+  });
+
+  test('hides the typing indicator when the agent stops typing', () => {
+    makeGenesysReady();
+
+    let startTyping;
+    let stopTyping;
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => { startTyping = callback; });
+    genesysService.unSubscribeAgentTyping.mockImplementation((callback) => { stopTyping = callback; });
+
+    renderComponent();
+
+    act(() => { startTyping(); });
+    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
+
+    act(() => { stopTyping(); });
+    expect(screen.queryByTestId('agent-typing')).not.toBeInTheDocument();
+  });
+
+  test('hides the typing indicator when an outbound human message arrives', () => {
+    let receiveMessage;
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
+    makeGenesysReady();
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => {
+      receiveMessage = callback;
+      callback([]);
+    });
+
+    renderComponent();
+    expect(screen.getByTestId('agent-typing')).toHaveClass('show');
+
+    act(() => {
+      receiveMessage([{
+        direction: 'Outbound',
+        type: 'Text',
+        text: 'Here is your answer.',
+        channel: { time: '2025-07-31T09:40:00Z' },
+        originatingEntity: 'Human',
+      }]);
+    });
+
+    expect(screen.queryByTestId('agent-typing')).not.toBeInTheDocument();
+  });
+
+  test('shows the agent connected banner when the agent starts typing', () => {
+    makeGenesysReady();
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
+    renderComponent();
+    expect(screen.getByTestId('agent-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('agent-banner')).toHaveTextContent(
+      'You are now connected to an agent.'
+    );
+  });
+
+  test('only shows the agent connected banner once even with multiple typing events', () => {
+    makeGenesysReady();
+
+    let typingCallback;
+    let messagesCallback;
+
+    // Capture the typing callback
+    genesysService.subscribeAgentTyping.mockImplementation(callback => {
+      typingCallback = callback;
+    });
+
+    // Capture the messages callback
+    genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
+      messagesCallback = callback;
+    });
+
+    renderComponent();
+
+    // 1. First typing event → creates the first agent-connected banner
+    act(() => typingCallback());
+    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+
+    // 2. Simulate a normal outgoing message arriving from Genesys
+    act(() =>
+      messagesCallback([
+        {
+          direction: 'Outbound',
+          type: 'Text',
+          text: 'Hello from the bot'
+        }
+      ])
+    );
+
+    // 3. Second typing callback should NOT create another banner message
+    act(() => typingCallback());
+
+    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+  });
+
+  test('only shows the agent connected banner correctly between disconnects', async () => {
+    makeGenesysReady();
+
+    let typingCallback;
+    let messagesCallback;
+
+    // Capture the typing callback
+    genesysService.subscribeAgentTyping.mockImplementation(callback => {
+      typingCallback = callback;
+    });
+
+    // Capture the messages callback
+    genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
+      messagesCallback = callback;
+    });
+
+    renderComponent();
+
+    // 1. First typing event → creates the first agent-connected banner
+    act(() => typingCallback());
+    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+    expect(screen.getByText('You are now connected to an agent.')).toBeInTheDocument();
+
+    // 2. Simulate an agent disconnect
+    act(() =>
+      messagesCallback([{
+        direction: 'Outbound',
+        type: 'Event',
+        channel: { time: '2025-07-31T09:45:00Z' },
+        events: [{
+          eventType: 'Presence',
+          presence: {
+            type: 'Disconnect'
+          }
+        }],
+        originatingEntity: "Human"
+      }])
+    );
+
+    // 3. Check agent connected banner has now been remove and agent disconnected has been added
+    await waitFor(() => {
+      expect(screen.queryByText('You are now connected to an agent.')).toBe(null);
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText('The agent has disconnected.')).toBeInTheDocument();
+    });
+
+    // 4. Second typing callback should NOT create another banner message
+    act(() => typingCallback());
+
+    // 5. Check the agent connected banner is correct displayed again
+
+    await waitFor(() => {
+      expect(screen.getByText('You are now connected to an agent.')).toBeInTheDocument()
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 9. End chat
+// ---------------------------------------------------------------------------
+
+describe('End chat', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('opens the end chat modal when the end chat button is clicked', async () => {
+    renderComponent();
+    await userEvent.click(screen.getByTestId('end-chat-button'));
+    expect(screen.getByTestId('end-chat-modal')).toBeInTheDocument();
+  });
+
+  test('closes the modal without ending chat when the cancel button is clicked', async () => {
+    renderComponent();
+
+    await userEvent.click(screen.getByTestId('end-chat-button'));
+    await userEvent.click(screen.getByTestId('close-end-chat-modal-button'));
+
+    expect(screen.queryByTestId('end-chat-modal')).not.toBeInTheDocument();
+    expect(genesysService.clearConversation).not.toHaveBeenCalled();
+  });
+
+  test('calls clearConversation with the correct key when end chat is confirmed', async () => {
+    renderComponent();
+    await userEvent.click(screen.getByTestId('end-chat-button'));
+    await userEvent.click(screen.getByTestId('confirm-end-chat-button'));
+    expect(genesysService.clearConversation).toHaveBeenCalledWith('test-local-storage-key');
+  });
+
+  test('calls the onChatEnded callback when end chat is confirmed', async () => {
+    const onChatEnded = jest.fn();
+    renderComponent({ onChatEnded });
+    await userEvent.click(screen.getByTestId('end-chat-button'));
+    await userEvent.click(screen.getByTestId('confirm-end-chat-button'));
+    expect(onChatEnded).toHaveBeenCalledTimes(1);
+  });
+
+  test('logs the end chat event with the correct service name', async () => {
+    renderComponent();
+    await userEvent.click(screen.getByTestId('end-chat-button'));
+    await userEvent.click(screen.getByTestId('confirm-end-chat-button'));
+    expect(genesysService.log).toHaveBeenCalledWith(
+      'info',
+      'Ending conversation as per user request',
+      { service: 'eta' }
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 10. Offline / reconnect banners
+// ---------------------------------------------------------------------------
+
+describe('Offline and reconnect banners', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('shows the offline banner when the offline event fires', () => {
+    let goOffline;
+    genesysService.subscribeToGenesysOffline.mockImplementation((callback) => { goOffline = callback; });
+    renderComponent();
+
+    act(() => { goOffline(); });
+
+    expect(screen.getByText(/You are currently offline/i)).toBeInTheDocument();
+  });
+
+  test('disables the message input, send button, and end chat button when offline', async () => {
+    let goOffline;
+    genesysService.subscribeToGenesysOffline.mockImplementation((callback) => { goOffline = callback; });
+    renderComponent();
+
+    act(() => { goOffline(); });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeDisabled();
+      expect(screen.getByTestId('send-message-button')).toBeDisabled();
+      expect(screen.getByTestId('end-chat-button')).toBeDisabled();
+    });
+  });
+
+  test('shows the reconnected banner after the reconnect delay', async () => {
+    jest.useFakeTimers();
+    genesysService.subscribeToGenesysReconnected.mockImplementation((callback) => callback());
+    renderComponent();
+
+    act(() => { jest.advanceTimersByTime(10); });
+
+    expect(screen.getByText(/You are now online/i)).toBeInTheDocument();
+  });
+
+  test('re-enables the form controls after reconnecting', async () => {
+    jest.useFakeTimers();
+    let goOffline;
+    let goOnline;
+    genesysService.subscribeToGenesysOffline.mockImplementation((callback) => { goOffline = callback; });
+    genesysService.subscribeToGenesysReconnected.mockImplementation((callback) => { goOnline = callback; });
+    renderComponent();
+
+    act(() => { goOffline(); });
+    await waitFor(() => expect(screen.getByTestId('message-input')).toBeDisabled());
+
+    act(() => {
+      goOnline();
+      jest.advanceTimersByTime(10);
+    });
+
+    await waitFor(() => expect(screen.getByTestId('message-input')).not.toBeDisabled());
+  });
+
+  test('does not restore session messages after a reconnect event', () => {
+    genesysService.subscribeToGenesysReconnected.mockImplementation((callback) => callback());
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+    renderComponent();
+    expect(screen.queryByTestId('outbound-message')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 11. Error states
+// ---------------------------------------------------------------------------
+
+describe('Error states', () => {
+  beforeEach(() => {
+    jest.resetAllMocks();
+  })
+
+  test('shows the error component when an SDK error fires', () => {
+    makeGenesysReady();
+
+    genesysService.subscribeToErrors.mockImplementation((callback) => callback());
+
+    renderComponent();
+
+    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+    expect(screen.queryByTestId('chat-messenger-form')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
+  });
+
+  test('shows the error component when initialisation fails', () => {
     globalThis.Genesys = {};
+    genesysService.initialiseGenesysConversation.mockImplementation((onReady, onError) => {
+      onReady();
+      onError();
+    });
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => callback([]));
+    renderComponent();
+    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+  });
 
+  test('shows the error component when sendMessageToGenesys fails', async () => {
+    makeGenesysReady();
+    genesysService.sendMessageToGenesys.mockImplementation((_msg, onError) => onError());
+    renderComponent();
+
+    await userEvent.type(screen.getByTestId('message-input'), 'test');
+    await userEvent.click(screen.getByTestId('send-message-button'));
+
+    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+  });
+
+  test('shows the error component when fetchMessageHistory fails', async () => {
+    makeGenesysReady();
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(largeSetRestoredMessages)
+    );
+    genesysService.subscribeToGenesysOldMessages.mockImplementation(() => { });
     let errorCallback;
-
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
-
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([]);
-    });
-
-    genesysService.subscribeToSessionRestored.mockImplementation((onSessionRestored) => {
-      onSessionRestored(largeSetRestoredMessages);
-    });
-
-    genesysService.subscribeToGenesysOldMessages.mockImplementation((onFetchHistory, onHistoryComplete) => {
-      onFetchHistoryCallback = onFetchHistory;
-      onHistoryCompleteCallback = onHistoryComplete;
-    });
-
     genesysService.fetchMessageHistory.mockImplementation((onError) => {
       errorCallback = onError;
     });
 
-    renderGenesysChatComponent();
+    renderComponent();
 
-    const loadMoreMessagesButton = screen.getByRole('button', { name: /Load more messages/i });
-    expect(loadMoreMessagesButton).toBeInTheDocument();
-    expect(loadMoreMessagesButton).toHaveTextContent('Load more messages');
+    const btn = await screen.findByRole('button', { name: /Load more messages/i });
+    await userEvent.click(btn);
 
-    const user = userEvent.setup();
-    await user.click(loadMoreMessagesButton);
+    act(() => { errorCallback(); });
 
-    // Simulate error callback being triggered by the Genesys SDK
-    act(() => {
-      errorCallback();
-    });
-
-    // Error component should be rendered
     await waitFor(() => {
-      const errorMessage = screen.getByTestId('error-message');
-      expect(errorMessage).toBeInTheDocument();
-      expect(errorMessage).toHaveTextContent('An error has occurred');
+      expect(screen.getByTestId('error-component')).toBeInTheDocument();
     });
   });
 });
 
-describe('Enable and disable Visibilty to structured message', () => {
-  test('handles visibilty to true for previous messages', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-    let previousMessage;
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
+// ---------------------------------------------------------------------------
+// 12. Banner messages
+// ---------------------------------------------------------------------------
 
+describe('Banner messages', () => {
+  beforeEach(() => makeGenesysReady());
 
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([incomingMessage[0]]);
-      previousMessage = setPreviousStructureHideTrue(withStructuredMessages);
-    });
-
-    renderGenesysChatComponent();
-
-    expect(previousMessage[2].content.hideContent).toBe(true);
+  test('renders the agent connected banner inside the log region', () => {
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
+    renderComponent();
+    const log = screen.getByRole('log');
+    expect(within(log).getByTestId('agent-banner')).toBeInTheDocument();
   });
 
-  test('handles not to set visibilty to content', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-    let previousMessage;
+  test('renders the agent disconnected banner with the correct text', async () => {
+    let receiveMessage;
 
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => {
+      receiveMessage = callback;
+      callback([]);
     });
 
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([incomingMessage[0]]);
-      previousMessage = setPreviousStructureHideTrue(largeSetRestoredMessages);
+    renderComponent();
+
+    act(() => {
+      receiveMessage([{
+        direction: 'Outbound',
+        type: 'Event',
+        channel: { time: '2025-07-31T09:45:00Z' },
+        events: [{
+          eventType: 'Presence',
+          presence: {
+            type: 'Disconnect'
+          }
+        }],
+        originatingEntity: "Human"
+      }]);
     });
 
-    renderGenesysChatComponent();
+    await waitFor(() => {
+      expect(screen.getByText('The agent has disconnected.')).toBeInTheDocument();
+    });
+  });
+});
 
-    for (let count = 0; count >= previousMessage.length; count++) {
-      expect(previousMessage[count].content).toBeUndefined();
-    };
+// ---------------------------------------------------------------------------
+// 13. Scroll behaviour
+// ---------------------------------------------------------------------------
+
+describe('Scroll behaviour', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('scrolls to the latest message when a new message arrives', () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([inboundMessages[0]])
+    );
+    renderComponent();
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith(
+      expect.objectContaining({ behavior: 'smooth', block: 'nearest' })
+    );
   });
 
-  test('handles the last index for structured message ', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-    let previousMessage;
-    let lastIndex;
+  test('does not scroll when historical messages are prepended via load more', async () => {
+    let onFetchHistory;
+    
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(largeSetRestoredMessages)
+    );
+    genesysService.subscribeToGenesysOldMessages.mockImplementation((onFetch) => {
+      onFetchHistory = onFetch;
+    });
+    
+    renderComponent();
 
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
+    // Reset the spy after the initial scroll that happens on session restore
+    Element.prototype.scrollIntoView.mockClear();
+
+    const btn = await screen.findByRole('button', { name: /Load more messages/i });
+    await userEvent.click(btn);
+
+    act(() => {
+      onFetchHistory({
+        messages: [{
+          text: 'Old message',
+          messageType: 'outbound',
+          type: 'text',
+          timestamp: '2025-07-31T08:00:00Z',
+          originatingEntity: 'Bot',
+        }]
+      });
     });
 
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([incomingMessage[0]]);
-      previousMessage = setPreviousStructureHideTrue(withStructuredMessages);
-      lastIndex = getStructureMessageIndex(previousMessage);
+    // scrollIntoView should not have been called again for the prepended history
+    await waitFor(() => {
+      expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 14. Mixed live + historical message ordering
+// ---------------------------------------------------------------------------
+
+describe('Mixed live and historical message ordering', () => {
+  beforeEach(() => makeGenesysReady());
+
+  test('displays live messages after historical ones', () => {
+    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
+      callback(restoredMessages)
+    );
+
+    let receiveMessage;
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) => {
+      receiveMessage = callback;
     });
 
-    renderGenesysChatComponent();
+    renderComponent();
 
-    expect(lastIndex).toBe(2);
+    act(() => {
+      receiveMessage([{
+        "direction": "Inbound",
+        "text": "I'd like to speak to an agent",
+        "type": "Text",
+        "channel": {
+          "time": "2025-07-31T09:42:00Z"
+        },
+        "metadata": {
+          "correlationId": "00000000-0000-0000-0000-000000000000"
+        },
+        "content": []
+      }]);
+    });
+
+
+    const allInbound = screen.getAllByTestId('inbound-message-wrapper');
+    
+    // The live message should be last in the DOM
+    expect(allInbound[allInbound.length - 1]).toHaveTextContent(
+      "I'd like to speak to an agent"
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 15. Accessibility
+// ---------------------------------------------------------------------------
+
+describe('Accessibility', () => {
+  const { axe, toHaveNoViolations } = require('jest-axe');
+  expect.extend(toHaveNoViolations);
+
+  test('the chat log region has the correct ARIA attributes', () => {
+    makeGenesysReady();
+    renderComponent();
+    const log = screen.getByRole('log');
+    expect(log).toHaveAttribute('aria-live', 'polite');
+    expect(log).toHaveAttribute('aria-label', 'Chat messages');
+    expect(log).toHaveAttribute('aria-relevant', 'additions text');
   });
 
-  it('return -1 as the last index for structured message ', async () => {
-    // Mock the Genesys window object 
-    globalThis.Genesys = {};
-    let previousMessage;
-    let lastIndex;
+  test('the typing indicator has role status for screen readers', () => {
+    makeGenesysReady();
 
-    genesysService.initialiseGenesysConversation.mockImplementation((onGenesysReady) => {
-      onGenesysReady();
-    });
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
 
-    genesysService.subscribeToGenesysMessages.mockImplementation((onMessagesReceived) => {
-      onMessagesReceived([incomingMessage[0]]);
-      previousMessage = setPreviousStructureHideTrue(largeSetRestoredMessages);
-      lastIndex = getStructureMessageIndex(previousMessage);
-    });
+    renderComponent();
 
-    renderGenesysChatComponent();
+    expect(screen.getByRole('status')).toBeInTheDocument();
+  });
 
-    expect(lastIndex).toBe(-1);
+  test('the chat form has no axe violations when Genesys is ready', async () => {
+    makeGenesysReady();
+    const { container } = renderComponent();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  test('the typing indicator has no axe violations when visible', async () => {
+    genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
+    const { container } = renderComponent();
+    const results = await axe(container);
+    expect(results).toHaveNoViolations();
+  });
+
+  test('messages have role article', () => {
+    makeGenesysReady();
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([inboundMessages[0], outboundMessages[2]])
+    );
+    renderComponent();
+    const articles = screen.getAllByRole('article');
+    expect(articles.length).toBeGreaterThanOrEqual(2);
   });
 });

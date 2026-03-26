@@ -3,7 +3,9 @@
  */
 
 /**
- * Map historical messages from Genesys format to standard format
+ * Map historical messages from Genesys format to standard format.
+ * Ensure each message has a root level id and timestamp attribute
+ * as these are used in determining chronological message order.
  */
 export function mapHistoricalMessagesToStandardMessageFormat(historicalMessages) {
   return historicalMessages.map(message => {
@@ -16,7 +18,9 @@ export function mapHistoricalMessagesToStandardMessageFormat(historicalMessages)
       type: message.type,
       text: message.text,
       originatingEntity: message.originatingEntity,
-      content: message.quickReplies
+      content: message.quickReplies,
+      id: message.id ?? message.metadata?.id ?? message.channel?.messageId ?? crypto.randomUUID(),
+      timestamp: message.timestamp
     };
   });
 }

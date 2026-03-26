@@ -12,7 +12,7 @@ The service subscribes to several web messenger SDK events in order to achieve t
 
 ### Initial Genesys Flow
 
-![Initial Genesys Flow](./assets/genesys-start-flow.png "Genesys Start Flow Diagram")
+![Initial Genesys Flow](./assets/genesys/genesys-start-flow.png "Genesys Start Flow Diagram")
 
 ### Post Ready Flow
 
@@ -28,7 +28,7 @@ The post-ready flow mostly consists of subscribing to key Genesys events that su
 - [offline](https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-offline)
 - [reconnected](https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-reconnected)
 
-![Genesys Post Ready Flow](./assets/genesys-post-ready-flow.png "Genesys Post Ready Flow")
+![Genesys Post Ready Flow](./assets/genesys/genesys-post-ready-flow.png "Genesys Post Ready Flow")
 
 ### Historical Messages Flow
 
@@ -38,7 +38,7 @@ When an active conversation is still in progress, every time the user visits the
 
 Once all historical messages have been loaded, the `historyComplete` event will fire, indicating there is no more history to fetch, which in turn will remove the 'load more messages' button from the chat window. 
 
-![Genesys Historical Messages Flow](./assets/genesys-history-flow.png "Genesys Historical Messages Flow")
+![Genesys Historical Messages Flow](./assets/genesys/genesys-history-flow.png "Genesys Historical Messages Flow")
 
 ### Offline Flow
 
@@ -46,4 +46,4 @@ Offline support is provided in the form of a Genesys subscription, of which ther
 
 Once the user is back online, the reconnected event is triggered and the user will see an updated banner message to notify them that chat features are enabled again.
 
-![Genesys Offline Flow](./assets/genesys-offline-flow.png "Genesys Offline Flow")
+![Genesys Offline Flow](./assets/genesys/genesys-offline-flow.png "Genesys Offline Flow")

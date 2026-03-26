@@ -31,7 +31,9 @@ describe('message-utils', () => {
           type: 'Text',
           text: 'Hello',
           originatingEntity: 'Human',
-          content: ['Yes', 'No']
+          content: ['Yes', 'No'],
+          id: "msg1",
+          timestamp: "2023-01-01T00:00:00Z"
         }
       ]);
     });
