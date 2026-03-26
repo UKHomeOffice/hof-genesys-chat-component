@@ -51,7 +51,6 @@ function makeEventMessage() {
 
 const defaultProps = {
   messages: [],
-  historicalMessages: [],
   lastMessageRef: null,
   handleQuickReply: jest.fn(),
   fetchMessageHistory: jest.fn(),
@@ -108,11 +107,10 @@ describe('Messages', () => {
       expect(screen.getByTestId('inbound')).toBeInTheDocument();
     });
 
-    test('renders a mixed list of hisotrical messages', () => {
+    test('renders a mixed list of historical messages', () => {
       const props = {
         ...defaultProps,
         messages: restoredMessages.messages,
-        historicalMessages: restoredMessages.messages,
       };
       render(<Messages {...props} />);
 
@@ -223,7 +221,6 @@ describe('Messages', () => {
       render(
         <Messages
           {...defaultProps}
-          historicalMessages={historicalMessages.messages}
           allHistoryFetched={false}
         />
       );
@@ -234,7 +231,6 @@ describe('Messages', () => {
       render(
         <Messages
           {...defaultProps}
-          historicalMessages={largeSetOfHistoricalMessages.messages}
           allHistoryFetched={false}
           lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
         />
@@ -246,7 +242,7 @@ describe('Messages', () => {
       render(
         <Messages
           {...defaultProps}
-          historicalMessages={largeSetOfHistoricalMessages.messages}
+          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
           allHistoryFetched={true}
         />
       );
@@ -263,7 +259,6 @@ describe('Messages', () => {
       render(
         <Messages
           {...defaultProps}
-          historicalMessages={historical}
           allHistoryFetched={false}
         />
       );
@@ -275,7 +270,6 @@ describe('Messages', () => {
       render(
         <Messages
           {...defaultProps}
-          historicalMessages={largeSetOfHistoricalMessages.messages}
           allHistoryFetched={false}
           fetchMessageHistory={fetchMessageHistory}
           lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}

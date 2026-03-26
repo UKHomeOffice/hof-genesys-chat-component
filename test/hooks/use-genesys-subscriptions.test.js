@@ -30,12 +30,12 @@ jest.mock('../../src/utils/genesys-agent', () => ({
   setReconnectedBanner: jest.fn((prev, text) => [...prev, { banner: 'reconnected', text }]),
 }));
 
-// ---- Mocks: structured-message ----
-jest.mock('../../src/utils/structured-message', () => ({
-  setHideContentProperty: jest.fn((msgs, hidden) => msgs.map(m => ({ ...m, hidden }))),
-  getStructureMessageIndex: jest.fn(() => 5),
-  setPreviousStructureHideTrue: jest.fn(prev => prev.map(p => ({ ...p, hideContent: true }))),
-  setHideContentToHistoricalMessages: jest.fn(msgs => msgs.map(m => ({ ...m, historical: true }))),
+// ---- Mocks: quick-replies ----
+jest.mock('../../src/utils/quick-replies', () => ({
+  setHideContentPropertyOnAllQuickReplies: jest.fn((msgs, hidden) => msgs.map(m => ({ ...m, hidden }))),
+  getQuickReplyIndex: jest.fn(() => 5),
+  hidePreviousQuickReplyMessages: jest.fn(prev => prev.map(p => ({ ...p, hideContent: true }))),
+  hideHistoricalQuickReplyMessages: jest.fn(msgs => msgs.map(m => ({ ...m, historical: true }))),
 }));
 
 import { renderHook, act } from '@testing-library/react';
@@ -50,11 +50,11 @@ import {
   setReconnectedBanner,
 } from '../../src/utils/genesys-agent';
 import {
-  setHideContentProperty,
-  getStructureMessageIndex,
-  setPreviousStructureHideTrue,
-  setHideContentToHistoricalMessages,
-} from '../../src/utils/structured-message';
+  setHideContentPropertyOnAllQuickReplies,
+  getQuickReplyIndex,
+  hidePreviousQuickReplyMessages,
+  hideHistoricalQuickReplyMessages,
+} from '../../src/utils/quick-replies';
 
 describe('useGenesysSubscriptions', () => {
   const baseParams = (overrides = {}) => ({
@@ -63,7 +63,7 @@ describe('useGenesysSubscriptions', () => {
     setHistoricalMessages: jest.fn(fn => fn([])),
     setShouldScrollToLatestMessage: jest.fn(),
     setAgentIsTyping: jest.fn(),
-    setMessageIndex: jest.fn(),
+    setLastQuickReplyMessageIndex: jest.fn(),
     setAllHistoryFetched: jest.fn(),
     setIsOffline: jest.fn(),
     setIsErrorState: jest.fn(),
@@ -121,10 +121,10 @@ describe('useGenesysSubscriptions', () => {
     expect(params.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
 
     // setMessages flow
-    expect(setPreviousStructureHideTrue).toHaveBeenCalledWith([]);
-    expect(setHideContentProperty).toHaveBeenCalledWith(newMessages, false);
-    expect(getStructureMessageIndex).toHaveBeenCalledWith(expect.any(Array));
-    expect(params.setMessageIndex).toHaveBeenCalledWith(5);
+    expect(hidePreviousQuickReplyMessages).toHaveBeenCalledWith([]);
+    expect(setHideContentPropertyOnAllQuickReplies).toHaveBeenCalledWith(newMessages, false);
+    expect(getQuickReplyIndex).toHaveBeenCalledWith(expect.any(Array));
+    expect(params.setLastQuickReplyMessageIndex).toHaveBeenCalledWith(5);
 
     // no chat-ended banner when checkChatEnded false
     expect(checkChatEnded).toHaveBeenCalled();
@@ -214,8 +214,7 @@ describe('useGenesysSubscriptions', () => {
       onOldMessages(historical);
     });
 
-    expect(setHideContentToHistoricalMessages).toHaveBeenCalledWith(historical.messages);
-    expect(params.setHistoricalMessages).toHaveBeenCalled();
+    expect(hideHistoricalQuickReplyMessages).toHaveBeenCalledWith(historical.messages);
     expect(params.mergeChatHistory).toHaveBeenCalledWith(
       expect.arrayContaining([{ id: 'h1', historical: true }, { id: 'h2', historical: true }])
     );
@@ -242,8 +241,7 @@ describe('useGenesysSubscriptions', () => {
       onRestored(historical);
     });
 
-    expect(setHideContentToHistoricalMessages).toHaveBeenCalledWith(historical.messages);
-    expect(params.setHistoricalMessages).toHaveBeenCalled();
+    expect(hideHistoricalQuickReplyMessages).toHaveBeenCalledWith(historical.messages);
     expect(params.mergeChatHistory).toHaveBeenCalled();
     expect(params.setShouldScrollToLatestMessage).toHaveBeenCalledWith(true);
   });
@@ -262,7 +260,7 @@ describe('useGenesysSubscriptions', () => {
       onRestored({ messages: [{ id: 'ignored' }] });
     });
 
-    expect(setHideContentToHistoricalMessages).not.toHaveBeenCalled();
+    expect(hideHistoricalQuickReplyMessages).not.toHaveBeenCalled();
     expect(params.setHistoricalMessages).not.toHaveBeenCalled();
     expect(params.mergeChatHistory).not.toHaveBeenCalled();
     expect(params.setShouldScrollToLatestMessage).not.toHaveBeenCalled();

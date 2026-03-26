@@ -1,7 +1,7 @@
 import { renderHook, act } from '@testing-library/react';
 import { useChatActions } from '../../src/hooks/chat/use-chat-actions';
 import { genesysService } from '../../src/services/genesys-service';
-import { setHideContentPropertyWithIndex } from '../../src/utils/structured-message';
+import { hideQuickReplyMessageAtIndex } from '../../src/utils/quick-replies';
 
 jest.mock('../../src/services/genesys-service', () => ({
   genesysService: {
@@ -12,8 +12,8 @@ jest.mock('../../src/services/genesys-service', () => ({
   },
 }));
 
-jest.mock('../../src/utils/structured-message', () => ({
-  setHideContentPropertyWithIndex: jest.fn((index, prev, value) => {
+jest.mock('../../src/utils/quick-replies', () => ({
+  hideQuickReplyMessageAtIndex: jest.fn((index, prev, value) => {
     return [{ placeholder: true, index, prev, value }];
   }),
 }));
@@ -24,7 +24,7 @@ describe('useChatActions', () => {
       userInput: '',
       setUserInput: jest.fn(),
       setMessages: jest.fn(fn => fn([])),
-      messageIndex: -1,
+      lastQuickReplyMessageIndex: -1,
       setShowEndChatModal: jest.fn(),
       setIsErrorState: jest.fn(),
       serviceName: 'test-service',
@@ -71,7 +71,7 @@ describe('useChatActions', () => {
   test('sendMessage sends message & clears input', () => {
     const params = createParams({
       userInput: 'hello world',
-      messageIndex: -1,
+      lastQuickReplyMessageIndex: -1,
     });
     const { result } = renderHook(() => useChatActions(params));
 
@@ -89,10 +89,10 @@ describe('useChatActions', () => {
     expect(params.setUserInput).toHaveBeenCalledWith('');
   });
 
-  test('sendMessage hides content when messageIndex != -1 and input length > 0', () => {
+  test('sendMessage hides content when lastQuickReplyMessageIndex != -1 and input length > 0', () => {
     const params = createParams({
       userInput: 'test',
-      messageIndex: 2,
+      lastQuickReplyMessageIndex: 2,
     });
     const { result } = renderHook(() => useChatActions(params));
 
@@ -103,7 +103,7 @@ describe('useChatActions', () => {
     });
 
     expect(params.setMessages).toHaveBeenCalled();
-    expect(setHideContentPropertyWithIndex).toHaveBeenCalledWith(
+    expect(hideQuickReplyMessageAtIndex).toHaveBeenCalledWith(
       2,
       expect.any(Array),
       true
@@ -113,7 +113,7 @@ describe('useChatActions', () => {
 
   test('handleKeyPress sends message on Enter and no shift', () => {
     const params = createParams({
-      messageIndex: 1,
+      lastQuickReplyMessageIndex: 1,
       userInput: 'abc'
     });
     const { result } = renderHook(() => useChatActions(params));

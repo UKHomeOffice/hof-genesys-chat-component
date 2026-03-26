@@ -13,7 +13,7 @@ export function useChatState() {
   const [shouldScrollToLatestMessage, setShouldScrollToLatestMessage] = useState(false);
   const [agentIsTyping, setAgentIsTyping] = useState(false);
   const [isErrorState, setIsErrorState] = useState(false);
-  const [messageIndex, setMessageIndex] = useState(0);
+  const [lastQuickReplyMessageIndex, setLastQuickReplyMessageIndex] = useState(0);
   const [showEndChatModal, setShowEndChatModal] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
   const [lastHistoryBatchCount, setLastHistoryBatchCount] = useState(0);
@@ -38,8 +38,8 @@ export function useChatState() {
     setAgentIsTyping,
     isErrorState,
     setIsErrorState,
-    messageIndex,
-    setMessageIndex,
+    lastQuickReplyMessageIndex,
+    setLastQuickReplyMessageIndex,
     showEndChatModal,
     setShowEndChatModal,
     isOffline,

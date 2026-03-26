@@ -5,11 +5,12 @@ import { useFetchMessageHistory } from './use-message-history';
 
 /**
  * Custom hook for chat actions
+ * 
  * @param {Object} params - Parameters
  * @param {string} userInput - Current user input
  * @param {Function} setUserInput - Setter for user input
  * @param {Function} setMessages - Setter for messages
- * @param {number} messageIndex - Current message index
+ * @param {number} lastQuickReplyMessageIndex - Index of last quick reply message
  * @param {Function} setShowEndChatModal - Setter for end chat modal
  * @param {Function} setIsErrorState - Setter for error state
  * @param {string} serviceName - Service name
@@ -19,13 +20,13 @@ import { useFetchMessageHistory } from './use-message-history';
  */
 export function useChatActions(params) {
 
-  const { userInput, setUserInput, setMessages, messageIndex, setIsErrorState } = params;
+  const { userInput, setUserInput, setMessages, lastQuickReplyMessageIndex, setIsErrorState } = params;
 
   const sendMessageHandlers = useSendMessage({
     userInput,
     setUserInput,
     setMessages,
-    messageIndex,
+    lastQuickReplyMessageIndex,
     setIsErrorState
   });
 

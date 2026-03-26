@@ -12,21 +12,21 @@ jest.mock('../../../src/services/genesys-service', () => ({
 }));
 
 // Mock utility
-jest.mock('../../../src/utils/structured-message', () => ({
-  setHideContentPropertyWithIndex: jest.fn((idx, prev, flag) => {
+jest.mock('../../../src/utils/quick-replies', () => ({
+  hideQuickReplyMessageAtIndex: jest.fn((idx, prev, flag) => {
     return [{ mock: true, idx, prev, flag }];
   }),
 }));
 
 import { genesysService } from '../../../src/services/genesys-service';
-import { setHideContentPropertyWithIndex } from '../../../src/utils/structured-message';
+import { hideQuickReplyMessageAtIndex } from '../../../src/utils/quick-replies';
 
 describe('useChatActions', () => {
   const createParams = (overrides = {}) => ({
     userInput: '',
     setUserInput: jest.fn(),
     setMessages: jest.fn(callback => callback([])),
-    messageIndex: -1,
+    lastQuickReplyMessageIndex: -1,
     setShowEndChatModal: jest.fn(),
     setIsErrorState: jest.fn(),
     serviceName: 'svc',
@@ -68,7 +68,7 @@ describe('useChatActions', () => {
   });
 
   test('sendMessage prevents default, sends message and clears input', () => {
-    const params = createParams({ userInput: 'Hi', messageIndex: -1 });
+    const params = createParams({ userInput: 'Hi', lastQuickReplyMessageIndex: -1 });
     const { result } = renderHook(() => useChatActions(params));
 
     const event = { preventDefault: jest.fn() };
@@ -86,7 +86,7 @@ describe('useChatActions', () => {
   });
 
   test('sendMessage hides content when index != -1 and input not empty', () => {
-    const params = createParams({ userInput: 'Test', messageIndex: 3 });
+    const params = createParams({ userInput: 'Test', lastQuickReplyMessageIndex: 3 });
     const { result } = renderHook(() => useChatActions(params));
 
     const event = { preventDefault: jest.fn() };
@@ -96,7 +96,7 @@ describe('useChatActions', () => {
     });
 
     expect(params.setMessages).toHaveBeenCalled();
-    expect(setHideContentPropertyWithIndex).toHaveBeenCalledWith(
+    expect(hideQuickReplyMessageAtIndex).toHaveBeenCalledWith(
       3,
       expect.any(Array),
       true
@@ -120,7 +120,7 @@ describe('useChatActions', () => {
   });
 
   test('handleKeyPress does nothing on non-Enter key', () => {
-    const params = createParams({ userInput: 'Test', messageIndex: 1 });
+    const params = createParams({ userInput: 'Test', lastQuickReplyMessageIndex: 1 });
     const { result } = renderHook(() => useChatActions(params));
 
     const event = { key: 'a', shiftKey: false, preventDefault: jest.fn() };
@@ -135,7 +135,7 @@ describe('useChatActions', () => {
   });
 
   test('handleKeyPress ignores Enter when shift is held', () => {
-    const params = createParams({ userInput: 'Test', messageIndex: 1 });
+    const params = createParams({ userInput: 'Test', lastQuickReplyMessageIndex: 1 });
     const { result } = renderHook(() => useChatActions(params));
 
     const event = { key: 'Enter', shiftKey: true, preventDefault: jest.fn() };
@@ -149,7 +149,7 @@ describe('useChatActions', () => {
   });
 
   test('handleKeyPress sends message on Enter with no shift', () => {
-    const params = createParams({ userInput: 'Hello', messageIndex: 2 });
+    const params = createParams({ userInput: 'Hello', lastQuickReplyMessageIndex: 2 });
     const { result } = renderHook(() => useChatActions(params));
 
     const event = { key: 'Enter', shiftKey: false, preventDefault: jest.fn() };

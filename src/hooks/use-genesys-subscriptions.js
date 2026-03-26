@@ -12,11 +12,11 @@ import {
   setReconnectedBanner,
 } from '../utils/genesys-agent';
 import {
-  setHideContentProperty,
-  getStructureMessageIndex,
-  setPreviousStructureHideTrue,
-  setHideContentToHistoricalMessages,
-} from '../utils/structured-message';
+  setHideContentPropertyOnAllQuickReplies,
+  getQuickReplyIndex,
+  hidePreviousQuickReplyMessages,
+  hideHistoricalQuickReplyMessages,
+} from '../utils/quick-replies';
 import { resetAgentBannerState, shouldShowAgentConnectedBanner } from './helpers/agent-banner-logic';
 
 /**
@@ -24,10 +24,9 @@ import { resetAgentBannerState, shouldShowAgentConnectedBanner } from './helpers
  * @param {Object} params - Parameters
  * @param {boolean} genesysIsReady - If Genesys is ready
  * @param {Function} setMessages - Setter for messages
- * @param {Function} setHistoricalMessages - Setter for historical messages
  * @param {Function} setShouldScrollToLatestMessage - Setter for scroll flag
  * @param {Function} setAgentIsTyping - Setter for agent typing
- * @param {Function} setMessageIndex - Setter for message index
+ * @param {Function} setLastQuickReplyMessageIndex - Setter for last quick reply message
  * @param {Function} setAllHistoryFetched - Setter for history fetched
  * @param {Function} setIsOffline - Setter for offline state
  * @param {Function} setIsErrorState - Setter for error state
@@ -41,10 +40,9 @@ import { resetAgentBannerState, shouldShowAgentConnectedBanner } from './helpers
 export function useGenesysSubscriptions({
   genesysIsReady,
   setMessages,
-  setHistoricalMessages,
   setShouldScrollToLatestMessage,
   setAgentIsTyping,
-  setMessageIndex,
+  setLastQuickReplyMessageIndex,
   setAllHistoryFetched,
   setIsOffline,
   setIsErrorState,
@@ -77,9 +75,9 @@ export function useGenesysSubscriptions({
       genesysService.subscribeToGenesysMessages((newMessages) => {
         setShouldScrollToLatestMessage(true);
         setMessages((prevMessages) => {
-          const currentMessages = setPreviousStructureHideTrue(prevMessages);
-          let newState = [...currentMessages, ...setHideContentProperty(newMessages, false)];
-          setMessageIndex(getStructureMessageIndex(newState));
+          const currentMessages = hidePreviousQuickReplyMessages(prevMessages);
+          let newState = [...currentMessages, ...setHideContentPropertyOnAllQuickReplies(newMessages, false)];
+          setLastQuickReplyMessageIndex(getQuickReplyIndex(newState));
           if (checkChatEnded(newState)) {
             resetAgentBannerState(hasShownConnectedBanner);
             newState = setAgentDisconnectedBanner(newState, agentDisconnectedText);
@@ -96,7 +94,7 @@ export function useGenesysSubscriptions({
     genesysIsReady,
     setMessages,
     setShouldScrollToLatestMessage,
-    setMessageIndex,
+    setLastQuickReplyMessageIndex,
     agentDisconnectedText,
     setAgentIsTyping
   ]);
@@ -147,16 +145,15 @@ export function useGenesysSubscriptions({
           setLastHistoryBatchCount(historicalMessages.messages.length);
 
           const mappedMessages = mapHistoricalMessagesToStandardMessageFormat(
-            setHideContentToHistoricalMessages(historicalMessages.messages)
+            hideHistoricalQuickReplyMessages(historicalMessages.messages)
           );
 
-          setHistoricalMessages((prevMessages) => [...prevMessages, ...mappedMessages]);
           mergeChatHistory(mappedMessages);
         },
         () => setAllHistoryFetched(true)
       );
     }
-  }, [genesysIsReady, setHistoricalMessages, mergeChatHistory, setAllHistoryFetched]);
+  }, [genesysIsReady, mergeChatHistory, setAllHistoryFetched, setLastHistoryBatchCount]);
 
   /**
    * Subscribe to session restored events to fetch historical messages.
@@ -194,14 +191,13 @@ export function useGenesysSubscriptions({
           }));
 
 
-          const currentHistorialMessages = setHideContentToHistoricalMessages(normalizedMessages);
-          setHistoricalMessages((prevMessages) => [...prevMessages, ...currentHistorialMessages]);
+          const currentHistorialMessages = hideHistoricalQuickReplyMessages(normalizedMessages);
           mergeChatHistory(currentHistorialMessages);
           setShouldScrollToLatestMessage(true);
         }
       });
     }
-  }, [genesysIsReady, setHistoricalMessages, mergeChatHistory, hasReconnectedRef, setShouldScrollToLatestMessage]);
+  }, [genesysIsReady, mergeChatHistory, hasReconnectedRef, setShouldScrollToLatestMessage, setLastHistoryBatchCount]);
 
   /**
    * Setup agent typing indicator. Create a callback function to pass to the Genesys subcription,

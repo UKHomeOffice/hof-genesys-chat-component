@@ -33,7 +33,7 @@ export function useGenesysInitialization({
     } else {
       genesysService.loadGenesysScript(genesysEnvironment, deploymentId);
     }
-  }, [genesysEnvironment, deploymentId]);
+  }, [setGenesysIsReady, genesysEnvironment, deploymentId]);
 
   /**
    * Initialise the Genesys conversation when the Genesys SDK is ready.
@@ -46,5 +46,5 @@ export function useGenesysInitialization({
         localStorageKey
       );
     }
-  }, [localStorageKey, navigationType]);
+  }, [setGenesysIsReady, localStorageKey, navigationType, setIsErrorState]);
 }

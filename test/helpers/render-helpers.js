@@ -22,11 +22,10 @@ const renderTypingComponent = (agentName, isAgentTyping) => {
   );
 };
 
-const renderMessagesComponent = (messages, historicalMessages, allHistoryFetched) => {
+const renderMessagesComponent = (messages, allHistoryFetched) => {
   return render(
     <Messages
       messages={messages}
-      historicalMessages={historicalMessages}
       lastMessageRef={null}
       handleQuickReply={null}
       fetchMessageHistory={null}

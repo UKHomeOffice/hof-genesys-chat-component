@@ -1,8 +1,18 @@
 import { useCallback } from 'react';
 import { genesysService } from '../../services/genesys-service';
-import { setHideContentPropertyWithIndex } from '../../utils/structured-message';
+import { hideQuickReplyMessageAtIndex } from '../../utils/quick-replies';
 
-export function useSendMessage({ userInput, setUserInput, messageIndex, setMessages, setIsErrorState }) {
+/**
+ * Custom hook for handling sending messages to Genesys. 
+ * 
+ * @param {string} userInput - the user input message
+ * @param {function} setUserInput - the function callback to set the user input state
+ * @param {integer} lastQuickReplyMessageIndex - the array index of the last quick reply message
+ * @param {function} setMessages - the function callback to set messages state
+ * @param {function} setIsErrorState - the function callback to update whether an error has occurred 
+ * @returns 
+ */
+export function useSendMessage({ userInput, setUserInput, lastQuickReplyMessageIndex, setMessages, setIsErrorState }) {
   const sendToGenesys = useCallback(() => {
     genesysService.sendMessageToGenesys(
       userInput,
@@ -10,6 +20,11 @@ export function useSendMessage({ userInput, setUserInput, messageIndex, setMessa
     );
   }, [userInput, setIsErrorState]);
 
+  /**
+   * Shared handler for message submission.
+   * Handles case where user has either clicked on, or typed response to quick reply
+   * and the system needs to then hide that button and replace with textual representation.
+   */
   const submitMessage = useCallback(() => {
     if (!userInput) {
       return;
@@ -17,14 +32,19 @@ export function useSendMessage({ userInput, setUserInput, messageIndex, setMessa
 
     sendToGenesys();
 
-    if (messageIndex !== -1) {
+    /*
+     * If lastQuickReplyMessageIndex is not -1, we need to hide the quick reply button.
+     * This covers the cases where a user clicks a quick reply option button or types a response,
+     * we then hide the buttons and show the user input as a message in chat.
+     */ 
+    if (lastQuickReplyMessageIndex !== -1) {
       setMessages(prev =>
-        setHideContentPropertyWithIndex(messageIndex, prev, true)
+        hideQuickReplyMessageAtIndex(lastQuickReplyMessageIndex, prev, true)
       );
     }
 
     setUserInput('');
-  }, [userInput, messageIndex, sendToGenesys, setMessages, setUserInput]);
+  }, [userInput, lastQuickReplyMessageIndex, sendToGenesys, setMessages, setUserInput]);
 
   const sendMessage = useCallback(
     (event) => {

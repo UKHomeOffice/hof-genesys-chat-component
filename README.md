@@ -45,7 +45,7 @@
 8. [Banner Message System](#8-banner-message-system)
 9. [Utility Modules](#9-utility-modules)
    - [9.1 message-utils.js](#91-message-utilsjs)
-   - [9.2 structured-message.js](#92-structured-messagejs)
+   - [9.2 quick-replies.js](#92-quick-relpyjs)
    - [9.3 conversation-storage.js](#93-conversation-storagejs)
 10. [Integrating in a Consuming Service](#10-integrating-in-a-consuming-service)
     - [10.1 Prerequisites](#101-prerequisites)
@@ -136,7 +136,7 @@ src/
 └── utils/
     ├── genesys-agent.js
     ├── message-utils.js
-    ├── structured-message.js
+    ├── quick-replies.js
     └── text-counter.js
 ```
 
@@ -294,7 +294,7 @@ All reactive state lives in `useChatState`. `GenesysChatComponent` destructures 
 | `shouldScrollToLatestMessage` | `boolean` | When `true`, `useChatUI` scrolls `lastMessageRef` into view. Reset after scroll. |
 | `agentIsTyping` | `boolean` | Controls visibility of the `TypingIndicator` component. |
 | `isErrorState` | `boolean` | When `true`, renders `errorComponent` and hides the chat UI. |
-| `messageIndex` | `number` | Index of the last structured message in the `messages` array. `-1` when none. Used to hide previous quick-reply buttons on send. |
+| `lastQuickReplyMessageIndex` | `number` | Index of the last quick reply in the `messages` array. `-1` when none. Used to hide previous quick-reply buttons on send. |
 | `showEndChatModal` | `boolean` | Controls visibility of the `EndChatModal` confirmation dialog. |
 | `isOffline` | `boolean` | When `true`, disables the textarea and Send/End Chat buttons. |
 | `lastHistoryBatchCount` | `number` | The count of messages in the most recent history batch. Shows "Load more" when `=== 25`. |
@@ -381,7 +381,7 @@ A façade hook that composes the four action sub-hooks and returns a flat API su
 
 ### 5.5 useSendMessage — Structured Message Handling
 
-When the user sends a message, if `messageIndex` is not `-1` (i.e. there is a visible structured/quick-reply message), the hook calls `setHideContentPropertyWithIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
+When the user sends a message, if `lastQuickReplyMessageIndex` is not `-1` (i.e. there is a visible quick-reply message), the hook calls `hideQuickReplyMessageAtIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
 
 ---
 
@@ -412,10 +412,10 @@ When the user sends a message, if `messageIndex` is not `-1` (i.e. there is a vi
 The `hideContent` property controls visibility of quick-reply button groups. Its lifecycle is managed purely in the subscription and send layers — `StructuredMessage` is stateless.
 
 1. New structured messages arrive from Genesys with `hideContent` undefined.
-2. `setHideContentProperty()` sets `hideContent: false` on all structured messages in the batch.
-3. `setPreviousStructureHideTrue()` is called on the existing messages array before merging — this hides buttons on any prior structured message.
-4. When the user sends a message, `setHideContentPropertyWithIndex` hides the button group at `messageIndex`.
-5. Historical structured messages have all buttons hidden except the last one (`setHideContentToHistoricalMessages`).
+2. `setHideContentPropertyOnAllQuickReplies()` sets `hideContent: false` on all quick replies in the batch.
+3. `hidePreviousQuickReplyMessages()` is called on the existing messages array before merging — this hides buttons on any prior structured message.
+4. When the user sends a message, `hideQuickReplyMessageAtIndex` hides the button group at `lastQuickReplyMessageIndex`.
+5. Historical structured messages have all buttons hidden except the last one (`hideHistoricalQuickReplyMessages`).
 
 ---
 
@@ -477,8 +477,8 @@ User presses Send (button click OR Enter key)
              ├─ genesysService.sendMessageToGenesys(userInput)
              │     └─ ERROR → setIsErrorState(true)
              │
-             ├─ messageIndex !== -1?
-             │     YES → setHideContentPropertyWithIndex(messageIndex, prev, true)
+             ├─ lastQuickReplyMessageIndex !== -1?
+             │     YES → hideQuickReplyMessageAtIndex(lastQuickReplyMessageIndex, prev, true)
              │           (hides quick-reply buttons)
              │
              └─ setUserInput("")
@@ -489,9 +489,9 @@ User presses Send (button click OR Enter key)
                    └─ MessagingService.messagesReceived fires
                          └─ useGenesysSubscriptions handler:
                                ├─ setShouldScrollToLatestMessage(true)
-                               ├─ setPreviousStructureHideTrue(prevMessages)
-                               ├─ append new messages with setHideContentProperty(newMessages, false)
-                               ├─ setMessageIndex(getStructureMessageIndex(newState))
+                               ├─ hidePreviousQuickReplyMessages(prevMessages)
+                               ├─ append new messages with setHideContentPropertyOnAllQuickReplies(newMessages, false)
+                               ├─ setLastQuickReplyMessageIndex(getQuickReplyIndex(newState))
                                ├─ checkChatEnded? → setAgentDisconnectedBanner()
                                └─ clearAgentTypingOnOutboundHumanMessage → setAgentIsTyping(false)
 ```
@@ -617,15 +617,15 @@ Banners are synthetic message objects injected into the `messages` array to comm
 | `clearAgentTypingOnOutboundHumanMessage(message, cb)` | Calls `cb()` (`setAgentIsTyping(false)`) when the first message in a new batch is `direction: 'Outbound'`, `originatingEntity: 'Human'` — i.e. the user's own message has been echoed back. |
 | `checkChatEnded(messages)` | Inspects the last message for a `Presence.Disconnect` event. Returns `true` only the first time it detects the end state (uses module-level `previousHasEnded` flag to prevent repeated banner injection). |
 
-### 9.2 structured-message.js
+### 9.2 quick-replies.js
 
 | Function | Description |
 |---|---|
-| `setHideContentProperty(messages, bool)` | Maps over messages and sets `hideContent` on all structured outbound messages. |
-| `getStructureMessageIndex(messages)` | Returns the index of the last structured outbound message, or `-1`. |
-| `setHideContentPropertyWithIndex(index, messages, bool)` | Sets `hideContent` on the message at a specific index only. |
-| `setPreviousStructureHideTrue(messages)` | Mutates (for performance) all structured messages in the existing array to `hideContent: true` before new messages are appended. |
-| `setHideContentToHistoricalMessages(messages)` | Hides all structured messages in a historical batch, then un-hides the last one. |
+| `setHideContentPropertyOnAllQuickReplies(messages, bool)` | Maps over messages and sets `hideContent` on all quick reply messages. |
+| `getQuickReplyIndex(messages)` | Returns the index of the last structured outbound message, or `-1`. |
+| `hideQuickReplyMessageAtIndex(index, messages, bool)` | Sets `hideContent` on the message at a specific index only. |
+| `hidePreviousQuickReplyMessages(messages)` | Mutates (for performance) all structured messages in the existing array to `hideContent: true` before new messages are appended. |
+| `hideHistoricalQuickReplyMessages(messages)` | Hides all quick reply messages in a historical batch, then un-hides the last one. |
 
 ### 9.3 conversation-storage.js
 
@@ -727,20 +727,7 @@ The following utilities are exported from the library barrel (`index.js`) for us
 
 ### 10.9 ConversationProvider
 
-A React context provider is exported that makes the current `conversationId` available anywhere in the component tree. Wrap your application (or just the chat section) if downstream components need access to the conversation ID without prop-drilling:
-
-```jsx
-import { ConversationProvider, useConversationId } from 'hof-genesys-chat-component';
-
-// Wrap
-<ConversationProvider>
-  <GenesysChatComponent ... />
-  <AuditTrailComponent />   {/* can call useConversationId() */}
-</ConversationProvider>
-
-// Consume
-const conversationId = useConversationId();
-```
+The ConversationProvider component is a React context provider that makes the current `conversationId` available anywhere in the component tree. The primary purpose of this is to track genesys interations per conversation, for audit and metrics.
 
 ---
 
@@ -818,9 +805,9 @@ For testing any local changes during development, use the sandbox (TODO) project
 Steps
 
 1. Bump the patch version 
-```bash
-yarn version --patch
-# Bumps the version in the package.json to the next patch increment
+```bash 
+yarn version --patch --no-git-tag-version
+# Bumps the version in the package.json to the next patch increment without create a git tag
 ```
 
 2. Build the project

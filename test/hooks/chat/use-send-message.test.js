@@ -20,20 +20,20 @@ describe('useSendMessage', () => {
     jest.clearAllMocks();
   });
 
-  function setup({ userInput = 'Hello', messageIndex = -1 } = {}) {
+  function setup({ userInput = 'Hello', lastQuickReplyMessageIndex = -1 } = {}) {
     return renderHook(() =>
       useSendMessage({
         userInput,
         setUserInput,
         setMessages,
-        messageIndex,
+        lastQuickReplyMessageIndex,
         setIsErrorState,
       })
     );
   }
 
   test('sends message to Genesys with error callback', () => {
-    const { result } = setup({ userInput: 'Hello', messageIndex: -1 });
+    const { result } = setup({ userInput: 'Hello', lastQuickReplyMessageIndex: -1 });
 
     act(() => result.current.sendMessage({ preventDefault: jest.fn() }));
 
@@ -59,8 +59,8 @@ describe('useSendMessage', () => {
     expect(setUserInput).toHaveBeenCalledWith('');
   });
 
-  test('hides structured message when messageIndex >= 0', () => {
-    const { result } = setup({ userInput: 'Hello', messageIndex: 3 });
+  test('hides structured message when lastQuickReplyMessageIndex >= 0', () => {
+    const { result } = setup({ userInput: 'Hello', lastQuickReplyMessageIndex: 3 });
 
     act(() => result.current.sendMessage({ preventDefault: jest.fn() }));
 

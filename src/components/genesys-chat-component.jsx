@@ -74,8 +74,6 @@ export default function GenesysChatComponent({
     setUserInput,
     messages,
     setMessages,
-    historicalMessages,
-    setHistoricalMessages,
     genesysIsReady,
     setGenesysIsReady,
     allHistoryFetched,
@@ -86,8 +84,8 @@ export default function GenesysChatComponent({
     setAgentIsTyping,
     isErrorState,
     setIsErrorState,
-    messageIndex,
-    setMessageIndex,
+    lastQuickReplyMessageIndex,
+    setLastQuickReplyMessageIndex,
     showEndChatModal,
     setShowEndChatModal,
     isOffline,
@@ -117,10 +115,9 @@ export default function GenesysChatComponent({
   useGenesysSubscriptions({
     genesysIsReady,
     setMessages,
-    setHistoricalMessages,
     setShouldScrollToLatestMessage,
     setAgentIsTyping,
-    setMessageIndex,
+    setLastQuickReplyMessageIndex,
     setAllHistoryFetched,
     setIsOffline,
     setIsErrorState,
@@ -143,7 +140,7 @@ export default function GenesysChatComponent({
     userInput,  
     setUserInput,  
     setMessages,
-    messageIndex,
+    lastQuickReplyMessageIndex,
     setShowEndChatModal,
     setIsErrorState,
     serviceName: destructuredServiceMetadata.serviceName,
@@ -159,7 +156,6 @@ export default function GenesysChatComponent({
         <>
           <Messages
             messages={messages}
-            historicalMessages={historicalMessages}
             lastMessageRef={lastMessageRef}
             handleQuickReply={handleQuickReply}
             fetchMessageHistory={handleFetchMessageHistory}

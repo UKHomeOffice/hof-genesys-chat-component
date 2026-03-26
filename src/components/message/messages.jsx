@@ -2,19 +2,10 @@ import { resolveMessageComponent } from './delegates/message-registry';
 import LoadMoreMessagesButton from './load-more-messages';
 
 /**
- * We only show the button to load more messages when there are at least 24 historical messages,
- * taking into account that some of these may be eventType messages which aren't text based messages.
- * These messages are filtered out before counting.
+ * We only show the button to load more messages when the last history batch count == 25.
  * @returns {boolean} whether to show the Load More Messages button
  */
 const showLoadMoreMessagesButton = (lastHistoryBatchCount, allHistoryFetched) => {
-  // Filter out any eventType messages, as these aren't messages
-  // if (!historicalMessages.length) {
-  //   return false;
-  // }
-  // const textMessages = historicalMessages.filter((message) => !Object.hasOwn(message, 'eventType'));
-  // return textMessages.length >= 24 && !allHistoryFetched;
-  
   return lastHistoryBatchCount === 25 && !allHistoryFetched;
 };
 
@@ -37,7 +28,6 @@ const resolveLastTextIndex = (messages) => {
 
 export default function Messages({
   messages,
-  historicalMessages,
   lastMessageRef,
   handleQuickReply,
   fetchMessageHistory,
