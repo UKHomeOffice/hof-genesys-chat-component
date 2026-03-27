@@ -8,12 +8,7 @@ jest.mock('../../src/services/genesys-service', () => ({
   },
 }));
 
-jest.mock('react-router', () => ({
-  useNavigationType: jest.fn(),
-}));
-
 import { genesysService } from '../../src/services/genesys-service';
-import { useNavigationType } from 'react-router';
 
 describe('useGenesysInitialization', () => {
   const baseParams = () => ({
@@ -34,8 +29,7 @@ describe('useGenesysInitialization', () => {
       (onSuccess) => onSuccess()
     );
 
-    globalThis.Genesys = {}; // Simulate SDK already loaded
-    useNavigationType.mockReturnValue('PUSH');
+    globalThis.Genesys = {}; // Simulate SDK already loaded    
 
     const params = baseParams();
     renderHook(() => useGenesysInitialization(params));
@@ -44,8 +38,7 @@ describe('useGenesysInitialization', () => {
     expect(genesysService.loadGenesysScript).not.toHaveBeenCalled();
   });
 
-  test('loads Genesys script when globalThis.Genesys is missing', () => {
-    useNavigationType.mockReturnValue('PUSH');
+  test('loads Genesys script when globalThis.Genesys is missing', () => {    
 
     const params = baseParams();
     renderHook(() => useGenesysInitialization(params));
@@ -60,7 +53,6 @@ describe('useGenesysInitialization', () => {
 
   test('initialises Genesys conversation when Genesys exists', () => {
     globalThis.Genesys = {}; // Simulate SDK ready
-    useNavigationType.mockReturnValue('PUSH');
 
     const params = baseParams();
     renderHook(() => useGenesysInitialization(params));
@@ -72,19 +64,8 @@ describe('useGenesysInitialization', () => {
     );
   });
 
-  test('initialises Genesys conversation when navigationType is POP (even if Genesys missing)', () => {
-    useNavigationType.mockReturnValue('POP'); // Force POP navigation
-    delete globalThis.Genesys;
-
-    const params = baseParams();
-    renderHook(() => useGenesysInitialization(params));
-
-    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalled();
-  });
-
   test('success callback of initialiseGenesysConversation triggers setGenesysIsReady', () => {
     globalThis.Genesys = {};
-    useNavigationType.mockReturnValue('PUSH');
 
     const params = baseParams();
     renderHook(() => useGenesysInitialization(params));
@@ -99,7 +80,6 @@ describe('useGenesysInitialization', () => {
 
   test('error callback of initialiseGenesysConversation triggers setIsErrorState', () => {
     globalThis.Genesys = {};
-    useNavigationType.mockReturnValue('PUSH');
 
     const params = baseParams();
     renderHook(() => useGenesysInitialization(params));
@@ -114,7 +94,6 @@ describe('useGenesysInitialization', () => {
 
   test('initial script loading effect is triggered only by deploymentId / setGenesysIsReady', () => {
     globalThis.Genesys = {}; // Prevent script load
-    useNavigationType.mockReturnValue('PUSH');
 
     const params = baseParams();
     const { rerender } = renderHook(() =>
@@ -128,24 +107,5 @@ describe('useGenesysInitialization', () => {
 
     expect(genesysService.loadGenesysScript).not.toHaveBeenCalled();
     expect(params.setGenesysIsReady).not.toHaveBeenCalled();
-  });
-
-  test('initialiseGenesysConversation effect depends on navigationType & localStorageKey', () => {
-    globalThis.Genesys = {};
-    useNavigationType.mockReturnValue('PUSH');
-
-    const params = baseParams();
-    const { rerender } = renderHook(() =>
-      useGenesysInitialization(params)
-    );
-
-    jest.clearAllMocks();
-
-    // Change navigationType to trigger second effect re-run
-    useNavigationType.mockReturnValue('POP');
-
-    rerender();
-
-    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalled();
   });
 });

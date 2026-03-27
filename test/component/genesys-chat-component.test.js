@@ -33,7 +33,6 @@ jest.mock('../../src/services/genesys-service.js', () => ({
 import '@testing-library/jest-dom';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { genesysService } from '../../src/services/genesys-service.js';
 import GenesysChatComponent from '../../src/components/genesys-chat-component';
 
@@ -63,17 +62,6 @@ afterEach(() => {
   try { jest.useRealTimers(); } catch (_) { }
 });
 
-/**
- * Mock the useNavigationType so that tests can start from a clean slate.
- * Using <MemoryRouter> to embed the component (required) also sets the initial
- * navigationType to "POP"
- */
-jest.mock('react-router', () => ({
-  ...jest.requireActual('react-router'),
-  useNavigationType: jest.fn(),
-}));
-
-
 // ---------------------------------------------------------------------------
 // Shared fixtures
 // ---------------------------------------------------------------------------
@@ -89,7 +77,7 @@ const SERVICE_METADATA = {
 };
 
 /**
- * Renders the component inside a MemoryRouter (required by useNavigationType).
+ * Renders the component.
  * genesysIsReady is only true after initialiseGenesysConversation calls its
  * first argument, so callers must mock that when they need the chat UI visible.
  */
@@ -100,18 +88,16 @@ function renderComponent({
   debugMode = false,
 } = {}) {
   return render(
-    <MemoryRouter>
-      <GenesysChatComponent
-        genesysEnvironment="test-environment"
-        deploymentId="test-deployment-id"
-        serviceMetadata={serviceMetadata}
-        loadingSpinner={<p data-testid="loading-spinner">Loading…</p>}
-        onChatEnded={onChatEnded}
-        errorComponent={<p data-testid="error-component">An error has occurred</p>}
-        maxCharacterLimit={maxCharacterLimit}
-        debugMode={debugMode}
-      />
-    </MemoryRouter>
+    <GenesysChatComponent
+      genesysEnvironment="test-environment"
+      deploymentId="test-deployment-id"
+      serviceMetadata={serviceMetadata}
+      loadingSpinner={<p data-testid="loading-spinner">Loading…</p>}
+      onChatEnded={onChatEnded}
+      errorComponent={<p data-testid="error-component">An error has occurred</p>}
+      maxCharacterLimit={maxCharacterLimit}
+      debugMode={debugMode}
+    />
   );
 }
 
@@ -162,15 +148,13 @@ describe('Initialisation', () => {
   test('calls setLogger with the provided loggingCallback on mount', () => {
     const loggingCallback = jest.fn();
     render(
-      <MemoryRouter>
-        <GenesysChatComponent
-          genesysEnvironment="env"
-          deploymentId="id"
-          serviceMetadata={SERVICE_METADATA}
-          loggingCallback={loggingCallback}
-          onChatEnded={jest.fn()}
-        />
-      </MemoryRouter>
+      <GenesysChatComponent
+        genesysEnvironment="env"
+        deploymentId="id"
+        serviceMetadata={SERVICE_METADATA}
+        loggingCallback={loggingCallback}
+        onChatEnded={jest.fn()}
+      />
     );
     expect(genesysService.setLogger).toHaveBeenCalledWith(loggingCallback);
   });
@@ -196,14 +180,12 @@ describe('Initialisation', () => {
     genesysService.subscribeToGenesysMessages.mockImplementation((callback) => callback([]));
 
     render(
-      <MemoryRouter>
-        <GenesysChatComponent
-          genesysEnvironment="env"
-          deploymentId="id"
-          serviceMetadata={{}}
-          onChatEnded={jest.fn()}
-        />
-      </MemoryRouter>
+      <GenesysChatComponent
+        genesysEnvironment="env"
+        deploymentId="id"
+        serviceMetadata={{}}
+        onChatEnded={jest.fn()}
+      />
     );
 
     // The component should not throw and the form should appear
@@ -1099,14 +1081,14 @@ describe('Scroll behaviour', () => {
 
   test('does not scroll when historical messages are prepended via load more', async () => {
     let onFetchHistory;
-    
+
     genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
       callback(largeSetRestoredMessages)
     );
     genesysService.subscribeToGenesysOldMessages.mockImplementation((onFetch) => {
       onFetchHistory = onFetch;
     });
-    
+
     renderComponent();
 
     // Reset the spy after the initial scroll that happens on session restore
@@ -1170,7 +1152,7 @@ describe('Mixed live and historical message ordering', () => {
 
 
     const allInbound = screen.getAllByTestId('inbound-message-wrapper');
-    
+
     // The live message should be last in the DOM
     expect(allInbound[allInbound.length - 1]).toHaveTextContent(
       "I'd like to speak to an agent"

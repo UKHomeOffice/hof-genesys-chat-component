@@ -6,7 +6,6 @@ import esbuild from 'rollup-plugin-esbuild';
 const external = (id) =>
   id === 'react' ||
   id === 'react-dom' ||
-  id === 'react-router' || // only if you actually use it in your lib surface
   id.startsWith('react/jsx-runtime');
 
 export default {

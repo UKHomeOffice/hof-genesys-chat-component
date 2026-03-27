@@ -175,8 +175,6 @@ Conversation initialisation follows a strict ordered sequence mandated by the Ge
 2. Within the ready callback: check `localStorage` for an existing session key. If found, fire `onGenesysReady()` immediately. If not, call `MessagingService.startConversation`.
 3. Register session-clearing subscriptions (`sessionCleared`, `conversationReset`, `conversationCleared`) — these remove the `localStorage` key whenever Genesys invalidates the session.
 
-> **ℹ Note:** POP navigation (browser back button after chat end) is a special case: `isInitialized` is already `true`, so the ready event will not fire again. The hook detects `navigationType === 'POP'` and calls `initialiseGenesysConversation` directly.
-
 ### 2.3 Session Persistence Strategy
 
 The library tracks whether a Genesys conversation is active using a caller-supplied `localStorage` key. This decouples session tracking from the Genesys SDK internal state, giving the consuming service full control over the key name.
@@ -214,7 +212,7 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 
 ## 3. GenesysChatComponent — Props API
 
-`GenesysChatComponent` is the single public UI entry point. Import it from the library and render it inside a React Router context (`react-router` is a peer dependency, required by `useNavigationType`).
+`GenesysChatComponent` is the single public UI entry point. Import it from the library and render it.
 
 ### 3.1 Required Props
 
@@ -251,27 +249,24 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 ### 3.4 Minimal Usage Example
 
 ```jsx
-import { GenesysChatComponent } from 'hof-genesys-chat-library';
-import { BrowserRouter } from 'react-router-dom';
+import { GenesysChatComponent } from 'hof-genesys-chat-component';
 
 export default function ChatPage() {
   return (
-    <BrowserRouter>
-      <GenesysChatComponent
-        genesysEnvironment="euw2.pure.cloud"
-        deploymentId="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
-        serviceMetadata={{
-          localStorageKey: "my_service_chat_session",
-          serviceName: "my-service",
-          agentConnectedText: "An adviser has joined the chat.",
-          botMetaDisplay: "Help assistant",
-        }}
-        onChatEnded={() => navigate("/chat-ended")}
-        loggingCallback={(log) => analyticsService.log(log)}
-        loadingSpinner={<Spinner />}
-        errorComponent={<ErrorBanner />}
-      />
-    </BrowserRouter>
+    <GenesysChatComponent
+      genesysEnvironment="euw2.pure.cloud"
+      deploymentId="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      serviceMetadata={{
+        localStorageKey: "my_service_chat_session",
+        serviceName: "my-service",
+        agentConnectedText: "An adviser has joined the chat.",
+        botMetaDisplay: "Help assistant",
+      }}
+      onChatEnded={() => navigate("/chat-ended")}
+      loggingCallback={(log) => analyticsService.log(log)}
+      loadingSpinner={<Spinner />}
+      errorComponent={<ErrorBanner />}
+    />
   );
 }
 ```
@@ -340,7 +335,7 @@ Bootstraps the Genesys SDK. Called once at the top level of `GenesysChatComponen
 **Internal effects:**
 
 - **Effect 1** — dependency `[genesysEnvironment, deploymentId]`: if Genesys global exists, calls `setGenesysIsReady(true)` immediately (script already loaded). Otherwise calls `loadGenesysScript`.
-- **Effect 2** — dependency `[localStorageKey, navigationType]`: if Genesys global exists **or** `navigationType === 'POP'`, calls `initialiseGenesysConversation`.
+- **Effect 2** — dependency `[localStorageKey]`: if Genesys global exists, calls `initialiseGenesysConversation`.
 
 ### 5.2 useGenesysSubscriptions
 
@@ -435,7 +430,7 @@ GenesysChatComponent mounts
        │     YES → setGenesysIsReady(true)  ───────────────────────┐
        │     NO  → loadGenesysScript(env, deploymentId)            │
        │                                                           │
-       └─ [Effect 2] Genesys loaded OR navigationType === "POP"    │
+       └─ [Effect 2] Genesys loaded                                │
              │                                                     │
              └─ initialiseGenesysConversation()                    │
                    │                                               │
@@ -640,7 +635,7 @@ Banners are synthetic message objects injected into the `messages` array to comm
 
 ### 10.1 Prerequisites
 
-- React 18+ with React Router DOM v6 (`useNavigationType` is required).
+- React 18+ with React Router DOM v6.
 - The library exposes ES modules — your bundler must support module resolution.
 - The Genesys bootstrap script is loaded by the library; do not add it manually to your HTML.
 
@@ -651,7 +646,7 @@ Banners are synthetic message objects injected into the `messages` array to comm
 yarn install hof-genesys-chat-component
 
 # Peer dependencies (if not already installed)
-yarn install react react-dom react-router-dom
+yarn install react react-dom
 ```
 
 ### 10.3 Logging Integration
@@ -735,7 +730,7 @@ The ConversationProvider component is a React context provider that makes the cu
 
 | Scenario | Behaviour |
 |---|---|
-| **Browser back button after chat end** | `navigationType` is `'POP'`; SDK is already loaded but no conversation exists. The hook detects this and calls `startConversation()` without waiting for `MessagingService.ready`. |
+| **Browser back button after chat end** | SDK is already loaded but no conversation exists. The hook detects this and calls `startConversation()` without waiting for `MessagingService.ready`. |
 | **Network drop mid-conversation** | `isOffline` is set, form is disabled, offline banner appended. On reconnect, banner is replaced (not doubled) after a 10 ms defer. |
 | **WebSocket reconnect duplicating messages** | `MessagingService.restored` fires after reconnect. `hasReconnectedRef` guards against re-applying messages already in state. |
 | **Multiple structured messages in sequence** | Only the last structured message in the list shows quick-reply buttons. All others are hidden. Sending a message hides the current one. |
@@ -787,7 +782,7 @@ Rollup processes `src/index.js` through four plugins in order:
 
 ### Peer dependencies
 
-`react`, `react-dom`, and `react-router` are marked as both `peerDependencies` and `external` in the Rollup config. They are never bundled — the consuming service is expected to provide them. This keeps the bundle small and avoids duplicate React instances.
+`react` and `react-dom` are marked as both `peerDependencies` and `external` in the Rollup config. They are never bundled — the consuming service is expected to provide them. This keeps the bundle small and avoids duplicate React instances.
 
 ### Other scripts
 
