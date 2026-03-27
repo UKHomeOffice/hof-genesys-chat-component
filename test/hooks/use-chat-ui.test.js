@@ -1,183 +1,213 @@
 import { renderHook, act } from '@testing-library/react';
-import { useChatActions } from '../../src/hooks/chat/use-chat-actions';
-import { genesysService } from '../../src/services/genesys-service';
-import { hideQuickReplyMessageAtIndex } from '../../src/utils/quick-replies';
+import { useChatUI } from '../../src/hooks/use-chat-ui';
 
-jest.mock('../../src/services/genesys-service', () => ({
-  genesysService: {
-    sendMessageToGenesys: jest.fn(),
-    clearConversation: jest.fn(),
-    fetchMessageHistory: jest.fn(),
-    log: jest.fn(),
-  },
-}));
-
-jest.mock('../../src/utils/quick-replies', () => ({
-  hideQuickReplyMessageAtIndex: jest.fn((index, prev, value) => {
-    return [{ placeholder: true, index, prev, value }];
-  }),
-}));
-
-describe('useChatActions', () => {
-  const createParams = (overrides = {}) => {
-    const params = {
-      userInput: '',
-      setUserInput: jest.fn(),
-      setMessages: jest.fn(fn => fn([])),
-      lastQuickReplyMessageIndex: -1,
-      setShowEndChatModal: jest.fn(),
-      setIsErrorState: jest.fn(),
-      serviceName: 'test-service',
-      onChatEnded: jest.fn(),
-      localStorageKey: 'CHAT_KEY',
-      ...overrides,
-    };
-    return params;
-  };
+describe('useChatUI', () => {
+  let mockSetShouldScrollToLatestMessage;
+  let mockSetMessages;
+  let lastMessageRef;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    mockSetShouldScrollToLatestMessage = jest.fn();
+    mockSetMessages = jest.fn((updater) => {
+      // simple state simulation if needed
+      if (typeof updater === 'function') {
+        mockSetMessages.currentState = updater(mockSetMessages.currentState || []);
+      } else {
+        mockSetMessages.currentState = updater;
+      }
+    });
+
+    lastMessageRef = {
+      current: {
+        scrollIntoView: jest.fn(),
+      },
+    };
   });
 
-  test('handleQuickReply sends message via Genesys', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useChatActions(params));
+  // ---------------------------------------------------------------------------
+  // SCROLL EFFECT
+  // ---------------------------------------------------------------------------
+  it('scrolls to the last message when shouldScrollToLatestMessage is true', () => {
+    const messages = [{ id: '1', timestamp: '2022-01-01T00:00:00Z' }];
 
-    const event = { preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.handleQuickReply(event, 'reply-text');
-    });
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('reply-text');
-  });
-
-  test('handleFetchMessageHistory triggers fetch and sets error on failure', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useChatActions(params));
-
-    // Simulate Genesys invoking error callback
-    genesysService.fetchMessageHistory.mockImplementation(cb => cb());
-
-    act(() => {
-      result.current.handleFetchMessageHistory();
-    });
-
-    expect(genesysService.fetchMessageHistory).toHaveBeenCalled();
-    expect(params.setIsErrorState).toHaveBeenCalledWith(true);
-  });
-
-  test('sendMessage sends message & clears input', () => {
-    const params = createParams({
-      userInput: 'hello world',
-      lastQuickReplyMessageIndex: -1,
-    });
-    const { result } = renderHook(() => useChatActions(params));
-
-    const event = { preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.sendMessage(event);
-    });
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith(
-      'hello world',
-      expect.any(Function)
-    );
-    expect(params.setUserInput).toHaveBeenCalledWith('');
-  });
-
-  test('sendMessage hides content when lastQuickReplyMessageIndex != -1 and input length > 0', () => {
-    const params = createParams({
-      userInput: 'test',
-      lastQuickReplyMessageIndex: 2,
-    });
-    const { result } = renderHook(() => useChatActions(params));
-
-    const event = { preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.sendMessage(event);
-    });
-
-    expect(params.setMessages).toHaveBeenCalled();
-    expect(hideQuickReplyMessageAtIndex).toHaveBeenCalledWith(
-      2,
-      expect.any(Array),
-      true
-    );
-    expect(params.setUserInput).toHaveBeenCalledWith('');
-  });
-
-  test('handleKeyPress sends message on Enter and no shift', () => {
-    const params = createParams({
-      lastQuickReplyMessageIndex: 1,
-      userInput: 'abc'
-    });
-    const { result } = renderHook(() => useChatActions(params));
-
-    const event = { key: 'Enter', shiftKey: false, preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.handleKeyPress(event);
-    });
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalled();
-    expect(params.setMessages).toHaveBeenCalled();
-    expect(params.setUserInput).toHaveBeenCalledWith('');
-  });
-
-  test('handleKeyPress does nothing on non-Enter key', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useChatActions(params));
-
-    const event = { key: 'a', shiftKey: false, preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.handleKeyPress(event);
-    });
-
-    expect(event.preventDefault).not.toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).not.toHaveBeenCalled();
-  });
-
-  test('handleEndChat logs, clears conversation, closes modal, and triggers callback', () => {
-    const params = createParams();
-    const { result } = renderHook(() => useChatActions(params));
-    const event = { preventDefault: jest.fn() };
-
-    act(() => {
-      result.current.handleEndChat(event);
-    });
-
-    expect(event.preventDefault).toHaveBeenCalled();
-    expect(params.setShowEndChatModal).toHaveBeenCalledWith(false);
-
-    expect(genesysService.log).toHaveBeenCalledWith(
-      'info',
-      'Ending conversation as per user request',
-      { service: 'test-service' }
+    renderHook(() =>
+      useChatUI({
+        messages,
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
     );
 
-    expect(genesysService.clearConversation).toHaveBeenCalledWith('CHAT_KEY');
-    expect(params.onChatEnded).toHaveBeenCalled();
+    expect(lastMessageRef.current.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'nearest',
+    });
   });
 
-  test('handleSendMessageToGenesys calls error callback on failure', () => {
-    const params = createParams({ userInput: 'test' });
+  it('does NOT scroll when shouldScrollToLatestMessage is false', () => {
+    const messages = [{ id: '1', timestamp: '2022-01-01T00:00:00Z' }];
 
-    // Simulate Genesys error
-    genesysService.sendMessageToGenesys.mockImplementation((msg, errorCb) => errorCb());
+    renderHook(() =>
+      useChatUI({
+        messages,
+        shouldScrollToLatestMessage: false,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
+    );
 
-    const { result } = renderHook(() => useChatActions(params));
+    expect(lastMessageRef.current.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  // ---------------------------------------------------------------------------
+  // mergeChatHistory CALLBACK
+  // ---------------------------------------------------------------------------
+  it('sets shouldScrollToLatestMessage to false when merging history', () => {
+    const { result } = renderHook(() =>
+      useChatUI({
+        messages: [],
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
+    );
 
     act(() => {
-      result.current.sendMessage({ preventDefault: jest.fn() });
+      result.current.mergeChatHistory([]);
     });
 
-    expect(params.setIsErrorState).toHaveBeenCalledWith(true);
+    expect(mockSetShouldScrollToLatestMessage).toHaveBeenCalledWith(false);
+  });
+
+  it('prepends mappedMessages to existing messages chronologically', () => {
+    mockSetMessages.currentState = [
+      {
+        id: 'b',
+        timestamp: '2022-01-02T10:00:00Z',
+      },
+      {
+        id: 'c',
+        timestamp: '2022-01-03T10:00:00Z',
+      },
+    ];
+
+    const { result } = renderHook(() =>
+      useChatUI({
+        messages: mockSetMessages.currentState,
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
+    );
+
+    const history = [
+      {
+        id: 'a',
+        timestamp: '2022-01-01T10:00:00Z',
+      },
+    ];
+
+    act(() => {
+      result.current.mergeChatHistory(history);
+    });
+
+    expect(mockSetMessages.currentState).toEqual([
+      {
+        id: 'a',
+        timestamp: '2022-01-01T10:00:00Z',
+      },
+      {
+        id: 'b',
+        timestamp: '2022-01-02T10:00:00Z',
+      },
+      {
+        id: 'c',
+        timestamp: '2022-01-03T10:00:00Z',
+      },
+    ]);
+  });
+
+  // ---------------------------------------------------------------------------
+  // SORTING LOGIC
+  // ---------------------------------------------------------------------------
+  it('sorts by timestamp first, then by id if timestamps are equal', () => {
+    mockSetMessages.currentState = [
+      { id: 'z', timestamp: '2022-01-01T10:00:00Z' },
+    ];
+
+    const { result } = renderHook(() =>
+      useChatUI({
+        messages: mockSetMessages.currentState,
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
+    );
+
+    const history = [
+      { id: 'a', timestamp: '2022-01-01T10:00:00Z' }, // same timestamp, id is alphabetical tie‑breaker
+      { id: 'b', timestamp: '2021-12-31T23:00:00Z' }, // earlier timestamp
+    ];
+
+    act(() => {
+      result.current.mergeChatHistory(history);
+    });
+
+    expect(mockSetMessages.currentState).toEqual([
+      // earliest timestamp first
+      { id: 'b', timestamp: '2021-12-31T23:00:00Z' },
+
+      // tie on timestamp -> alphabetical by id: 'a' then 'z'
+      { id: 'a', timestamp: '2022-01-01T10:00:00Z' },
+      { id: 'z', timestamp: '2022-01-01T10:00:00Z' },
+    ]);
+  });
+
+  // ---------------------------------------------------------------------------
+  // EDGE CASES
+  // ---------------------------------------------------------------------------
+  it('handles empty mappedMessages correctly', () => {
+    mockSetMessages.currentState = [{ id: '1', timestamp: '2022-01-01T00:00:00Z' }];
+
+    const { result } = renderHook(() =>
+      useChatUI({
+        messages: mockSetMessages.currentState,
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef,
+      })
+    );
+
+    act(() => {
+      result.current.mergeChatHistory([]);
+    });
+
+    expect(mockSetMessages.currentState).toEqual([
+      { id: '1', timestamp: '2022-01-01T00:00:00Z' },
+    ]);
+  });
+
+  it('does nothing if lastMessageRef.current is null', () => {
+    const nullRef = { current: null };
+
+    renderHook(() =>
+      useChatUI({
+        messages: [{ id: '1', timestamp: '2022-01-01T00:00:00Z' }],
+        shouldScrollToLatestMessage: true,
+        setShouldScrollToLatestMessage: mockSetShouldScrollToLatestMessage,
+        setMessages: mockSetMessages,
+        lastMessageRef: nullRef,
+      })
+    );
+
+    // no crash, no call
+    expect(true).toBe(true);
   });
 });
