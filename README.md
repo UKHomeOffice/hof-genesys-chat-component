@@ -220,18 +220,18 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 |---|---|---|
 | `genesysEnvironment` | `string` | Genesys Cloud region domain (e.g. `"mypurecloud.com"`, `"euw2.pure.cloud"`). |
 | `deploymentId` | `string` | The Genesys Messenger deployment ID for your environment. |
+| `onChatEnded` | `Function` | `() => {}` | Callback fired after the user confirms ending the chat. Use this to redirect or update parent state. |
+| `errorComponent` | `ReactNode` | `{}` | Custom component rendered when `isErrorState` becomes `true` (Genesys SDK error or send failure). |
+| `loadingSpinner` | `ReactNode` | `undefined` | Component rendered while Genesys is initialising (`genesysIsReady === false`). |
+| `serviceMetadata` | `object` | `{}` | Service-specific config object. See [Section 3.3](#33-servicemetadata-object). |
 
 ### 3.2 Optional Props
 
 | Prop | Type | Default | Description |
 |---|---|---|---|
-| `serviceMetadata` | `object` | `{}` | Service-specific config object. See [Section 3.3](#33-servicemetadata-object). |
-| `onChatEnded` | `Function` | `() => {}` | Callback fired after the user confirms ending the chat. Use this to redirect or update parent state. |
-| `loadingSpinner` | `ReactNode` | `undefined` | Component rendered while Genesys is initialising (`genesysIsReady === false`). |
 | `loggingCallback` | `Function` | `() => {}` | Receives structured log events: `{ level, message, metadata }`. Wire to your service logger or analytics. |
 | `maxCharacterLimit` | `number` | `4096` | Maximum characters allowed per user message. Matches Genesys message limit. Enforced via UI disable + error style. |
 | `debugMode` | `boolean` | `false` | Passes `debug: true` to the Genesys SDK configuration for verbose SDK logging. |
-| `errorComponent` | `ReactNode` | `{}` | Custom component rendered when `isErrorState` becomes `true` (Genesys SDK error or send failure). |
 
 ### 3.3 serviceMetadata Object
 

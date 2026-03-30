@@ -7,7 +7,6 @@ import { useState, useRef } from 'react';
 export function useChatState() {
   const [userInput, setUserInput] = useState('');
   const [messages, setMessages] = useState([]);
-  const [historicalMessages, setHistoricalMessages] = useState([]);
   const [genesysIsReady, setGenesysIsReady] = useState(false);
   const [allHistoryFetched, setAllHistoryFetched] = useState(false);
   const [shouldScrollToLatestMessage, setShouldScrollToLatestMessage] = useState(false);
