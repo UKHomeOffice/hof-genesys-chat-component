@@ -50,7 +50,7 @@ export default function Messages({
           <LoadMoreMessagesButton onClick={fetchMessageHistory} />
         }
       </div>
-      {messages.map((message, index) => {
+      {messages.length > 0 && messages.map((message, index) => {
         const MessageComponent = resolveMessageComponent(message);
         if (!MessageComponent) {
           return null;

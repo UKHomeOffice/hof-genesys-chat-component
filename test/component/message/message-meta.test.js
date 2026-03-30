@@ -23,7 +23,7 @@ describe('MessageMetaData', () => {
       />
     );
     const time = container.querySelector('time');
-    expect(time).toHaveAttribute('dateTime', '10:00');
+    expect(time).toHaveAttribute('dateTime', '2024-01-01T10:00:00Z');
   });
 
   test('sets the aria-label on the time element', () => {

@@ -6,9 +6,10 @@ export default function CharacterCounter({ maxCharacterLimit, textLength }) {
   const isMaxLength = isTextOffset(offSetText);
 
   return (
-    <div className={`${isMaxLength ? 'max-length-message' : null}`}
+    <div className={`${isMaxLength ? 'max-length-message' : ''}`}
       role="article"
       aria-label="Character counter"
+      aria-live='polite'
       data-testid="character-counter">
       {
         isMaxLength &&

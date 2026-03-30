@@ -9,8 +9,7 @@ export default function InboundMessage({ message, isLast, lastMessageRef }) {
       <div className="inbound-message-wrapper"
         role="article"
         aria-label="Inbound message"
-        data-testid="inbound-message-wrapper"
-        ref={isLast ? lastMessageRef : null}>
+        data-testid="inbound-message-wrapper">
         <MessageText type='Inbound' text={message.text} />
         <MessageMetaData type='Inbound' messageTimeStamp={timestamp} metaDisplay='You' />
       </div>

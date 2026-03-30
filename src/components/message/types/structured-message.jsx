@@ -14,6 +14,7 @@ export default function StructuredMessage({ contents, handleQuickReply }) {
     <div className='govuk-button-group select-question'>
       {contents.map((content, index) => (
         <button key={index}
+          type='button'
           data-testid='quick-reply-button'
           className='govuk-button message-button'
           onClick={(event) => handleQuickReply(event, content.quickReply.text || content.quickReply.payload)}

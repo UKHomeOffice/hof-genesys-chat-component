@@ -742,8 +742,8 @@ describe('Typing indicator', () => {
     makeGenesysReady();
     genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
     renderComponent();
-    expect(screen.getByTestId('agent-banner')).toBeInTheDocument();
-    expect(screen.getByTestId('agent-banner')).toHaveTextContent(
+    expect(screen.getByTestId('banner-message')).toBeInTheDocument();
+    expect(screen.getByTestId('banner-message')).toHaveTextContent(
       'You are now connected to an agent.'
     );
   });
@@ -768,7 +768,7 @@ describe('Typing indicator', () => {
 
     // 1. First typing event → creates the first agent-connected banner
     act(() => typingCallback());
-    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+    expect(screen.getAllByTestId('banner-message')).toHaveLength(1);
 
     // 2. Simulate a normal outgoing message arriving from Genesys
     act(() =>
@@ -784,7 +784,7 @@ describe('Typing indicator', () => {
     // 3. Second typing callback should NOT create another banner message
     act(() => typingCallback());
 
-    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+    expect(screen.getAllByTestId('banner-message')).toHaveLength(1);
   });
 
   test('only shows the agent connected banner correctly between disconnects', async () => {
@@ -807,7 +807,7 @@ describe('Typing indicator', () => {
 
     // 1. First typing event → creates the first agent-connected banner
     act(() => typingCallback());
-    expect(screen.getAllByTestId('agent-banner')).toHaveLength(1);
+    expect(screen.getAllByTestId('banner-message')).toHaveLength(1);
     expect(screen.getByText('You are now connected to an agent.')).toBeInTheDocument();
 
     // 2. Simulate an agent disconnect
@@ -1044,7 +1044,8 @@ describe('Banner messages', () => {
     genesysService.subscribeAgentTyping.mockImplementation((callback) => callback());
     renderComponent();
     const log = screen.getByRole('log');
-    expect(within(log).getByTestId('agent-banner')).toBeInTheDocument();
+    expect(within(log).getByTestId('banner-message')).toBeInTheDocument();
+    expect(within(log).getByTestId('banner-message')).toHaveTextContent('You are now connected to an agent.');
   });
 
   test('renders the agent disconnected banner with the correct text', async () => {

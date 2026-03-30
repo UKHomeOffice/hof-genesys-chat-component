@@ -35,7 +35,7 @@ export default function GenesysChatComponent({
   genesysEnvironment,
   deploymentId,
   serviceMetadata = {},
-  onChatEnded,
+  onChatEnded = () => {},
   loadingSpinner,
   loggingCallback = () => {},
   maxCharacterLimit = 4096, 
@@ -54,7 +54,7 @@ export default function GenesysChatComponent({
     agentDisconnectedText: serviceMetadata.agentDisconnectedText || 'The agent has disconnected.',
     offlineText: serviceMetadata.offlineText || 'You are offline. Please check your connection.',
     onlineText: serviceMetadata.onlineText || 'You are back online.',
-    utmParam: serviceMetadata.utmParams || "",
+    utmParam: serviceMetadata.utmParams || '',
     botMetaDisplay: serviceMetadata.botMetaDisplay || 'Digital assistant',
   }), [serviceMetadata]);
 

@@ -18,14 +18,8 @@ describe('BannerMessage', () => {
 
   test('has aria-label "Agent connected" when disconnected is not set', () => {
     render(<BannerMessage message={baseMessage} isLast={false} lastMessageRef={null} />);
-    expect(screen.getByRole('article')).toHaveAttribute('aria-label', 'Agent connected');
+    expect(screen.getByRole('article')).toHaveAttribute('aria-label', 'Banner message');
   });
-
-  // test('has aria-label "Agent Disconnected" when disconnected is true', () => {
-  //   const message = { ...baseMessage, disconnected: true };
-  //   render(<BannerMessage message={message} isLast={false} lastMessageRef={null} />);
-  //   expect(screen.getByRole('article')).toHaveAttribute('aria-label', 'Agent Disconnected');
-  // });
 
   test('applies govuk-body class to the paragraph', () => {
     const { container } = render(

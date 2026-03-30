@@ -24,9 +24,9 @@ export default function OutboundTextMessage({
         aria-label="Outbound message"
         data-testid="outbound-message-wrapper">
 
-        <MessageText messageType='Outbound' text={message.text} utmParam={utmParam} />
+        <MessageText type='Outbound' text={message.text} utmParam={utmParam} />
         <MessageMetaData
-          metaDataType='Outbound'
+          type='Outbound'
           messageTimeStamp={timestamp}
           metaDisplay={resolveMetaDisplay(message, botMetaDisplay)} />
 
