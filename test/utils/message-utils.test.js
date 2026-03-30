@@ -61,14 +61,14 @@ describe('message-utils', () => {
 
   describe('checkChatEnded', () => {
     it('should return false for empty messages', () => {
-      expect(checkChatEnded([])).toBe(false);
+      expect(checkChatEnded([]).shouldShowHint).toBe(false);
     });
 
     it('should return false for non-ending messages', () => {
       const messages = [
         { originatingEntity: 'Bot', direction: 'Inbound', events: [] }
       ];
-      expect(checkChatEnded(messages)).toBe(false);
+      expect(checkChatEnded(messages).shouldShowHint).toBe(false);
     });
 
     it('should return true for disconnect event', () => {
@@ -81,7 +81,7 @@ describe('message-utils', () => {
           ]
         }
       ];
-      expect(checkChatEnded(messages)).toBe(true);
+      expect(checkChatEnded(messages).shouldShowHint).toBe(true);
     });
 
     it('should track state changes across multiple calls', () => {
@@ -94,13 +94,14 @@ describe('message-utils', () => {
           ]
         }
       ];
-      // The function has internal state that tracks whether chat has ended
-      // First invocation should return true if this is the first time seeing the end event
-      const firstCall = checkChatEnded(messages);
-      // Subsequent calls with the same ending state should return consistently
-      const secondCall = checkChatEnded(messages);
-      // At least one of these should be true (first detection) or both false (already seen)
-      expect([firstCall, secondCall].some(result => typeof result === 'boolean')).toBe(true);
+      let previousHasEnded = false;
+      const firstCall = checkChatEnded(messages, previousHasEnded);
+      expect(firstCall.shouldShowHint).toBe(true);
+      expect(firstCall.hasEnded).toBe(true);
+      previousHasEnded = firstCall.hasEnded;
+      const secondCall = checkChatEnded(messages, previousHasEnded);
+      expect(secondCall.shouldShowHint).toBe(false);
+      expect(secondCall.hasEnded).toBe(true);
     });
   });
 });

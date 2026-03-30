@@ -34,18 +34,18 @@ export function clearAgentTypingOnOutboundHumanMessage(message, agentTypingCallb
   }
 }
 
-let previousHasEnded = false;
-
 /**
  * Check if chat has ended by looking for Presence Disconnect event
+ * @param {Array} messages - The array of messages
+ * @param {boolean} previousHasEnded - The previous ended state
+ * @returns {Object} { hasEnded: boolean, shouldShowHint: boolean }
  */
-export function checkChatEnded(messages) {
+export function checkChatEnded(messages, previousHasEnded = false) {
   if (!Array.isArray(messages) || messages.length === 0) {
-    previousHasEnded = false;
-    return false;
+    return { hasEnded: false, shouldShowHint: false };
   }
 
-  const lastMessage = messages[messages.length - 1];
+  const lastMessage = messages.at(-1);
   const hasEnded =
     lastMessage.originatingEntity === 'Human' &&
     lastMessage.direction === 'Outbound' &&
@@ -57,6 +57,5 @@ export function checkChatEnded(messages) {
     );
 
   const shouldShowHint = hasEnded && !previousHasEnded;
-  previousHasEnded = hasEnded;
-  return shouldShowHint;
+  return { hasEnded, shouldShowHint };
 }

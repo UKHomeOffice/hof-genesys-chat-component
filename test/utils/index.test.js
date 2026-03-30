@@ -1,8 +1,6 @@
 import {
   formatDate,
   stringsAreEqualIgnoringCase,
-  isConnectedToAgent,
-  getCurrentAgentName
 } from '../../src/utils'; // adjust path as needed
 
 describe('formatDate', () => {
@@ -35,65 +33,5 @@ describe('stringsAreEqualIgnoringCase', () => {
 
   test('handles mixed case and spacing', () => {
     expect(stringsAreEqualIgnoringCase('TeSt', 'tEsT')).toBe(true);
-  });
-});
-
-describe('isConnectedToAgent', () => {
-  test('returns true when direction is Outbound and nickname exists', () => {
-    const msg = {
-      direction: 'Outbound',
-      channel: { from: { nickname: 'Agent Smith' } }
-    };
-    expect(isConnectedToAgent(msg)).toBe('Agent Smith');
-  });
-
-  test('returns false when direction is not Outbound', () => {
-    const msg = {
-      direction: 'Inbound',
-      channel: { from: { nickname: 'Agent' } }
-    };
-    expect(isConnectedToAgent(msg)).toBe(false);
-  });
-
-  test('returns false when nickname is missing', () => {
-    const msg = {
-      direction: 'Outbound',
-      channel: { from: {} }
-    };
-    expect(isConnectedToAgent(msg)).toBe(undefined);
-  });
-
-  test('returns false when message is undefined', () => {
-    expect(isConnectedToAgent(undefined)).toBe(false);
-  });
-});
-
-describe('getCurrentAgentName', () => {
-  test('returns nickname when connected to agent', () => {
-    const msg = {
-      direction: 'Outbound',
-      channel: { from: { nickname: 'Agent Smith' } }
-    };
-    expect(getCurrentAgentName(msg)).toBe('Agent Smith');
-  });
-
-  test('returns undefined when not connected to agent', () => {
-    const msg = {
-      direction: 'Inbound',
-      channel: { from: { nickname: 'Agent' } }
-    };
-    expect(getCurrentAgentName(msg)).toBeUndefined();
-  });
-
-  test('returns undefined if message missing nickname', () => {
-    const msg = {
-      direction: 'Outbound',
-      channel: { from: {} }
-    };
-    expect(getCurrentAgentName(msg)).toBeUndefined();
-  });
-
-  test('returns undefined if message is null', () => {
-    expect(getCurrentAgentName(null)).toBeUndefined();
   });
 });

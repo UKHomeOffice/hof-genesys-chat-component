@@ -16,7 +16,7 @@ The service subscribes to several web messenger SDK events in order to achieve t
 
 ### Post Ready Flow
 
-The post-ready flow mostly consists of subscribing to key Genesys events that support the operation and functionality of the web messengers. Once the `ready` event has fired, the rest of the SDK functions are available to be subscribed too. The core events currently subscribed to are:
+The post-ready flow mostly consists of subscribing to key Genesys events that support the operation and functionality of the web messengers. Once the `ready` event has fired, the rest of the SDK functions are available to be subscribed to. The core events currently subscribed to are:
 
 - [messages received](https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-messagesreceived)
 - [old messages](https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-oldmessages)
@@ -34,7 +34,7 @@ The post-ready flow mostly consists of subscribing to key Genesys events that su
 
 A conversation between a user and Genesys lasts indefinitely, until the user ends that chat themselves by clicking 'End chat' and confirming. The end chat process clears down the active conversation on the Genesys side and removes all messages for that specific conversation.
 
-When an active conversation is still in progress, every time the user visits the service, their historical messages will be loaded into the chat. By default, Genesys sends 25 histoical messages per request, so if the user has more than 25 historical messages, they can load more by clicking the 'load more messages' button which will be available at the top of their chat window.
+When an active conversation is still in progress, every time the user visits the service, their historical messages will be loaded into the chat. By default, Genesys sends 25 historical messages per request, so if the user has more than 25 historical messages, they can load more by clicking the 'load more messages' button which will be available at the top of their chat window.
 
 Once all historical messages have been loaded, the `historyComplete` event will fire, indicating there is no more history to fetch, which in turn will remove the 'load more messages' button from the chat window. 
 
@@ -42,7 +42,7 @@ Once all historical messages have been loaded, the `historyComplete` event will 
 
 ### Offline Flow
 
-Offline support is provided in the form of a Genesys subscription, of which there are 2 parts; offline and reconnected. When a user loses connectiviy to the Genesys server (e.g. loss of internet), this will be detected on the Geensys side and the SDK will trigger the offline event. As a result of this, the web messenger will show an offline banner to the user to notify them that chat features will no longer work until they're reconnected. 
+Offline support is provided in the form of a Genesys subscription, of which there are 2 parts; offline and reconnected. When a user loses connectivity to the Genesys server (e.g. loss of internet), this will be detected on the Genesys side and the SDK will trigger the offline event. As a result of this, the web messenger will show an offline banner to the user to notify them that chat features will no longer work until they're reconnected. 
 
 Once the user is back online, the reconnected event is triggered and the user will see an updated banner message to notify them that chat features are enabled again.
 

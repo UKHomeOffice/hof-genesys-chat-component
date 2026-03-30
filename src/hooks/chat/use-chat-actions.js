@@ -30,7 +30,7 @@ export function useChatActions(params) {
     setIsErrorState
   });
 
-  const quickReplyHandlers = useQuickReply();
+  const quickReplyHandlers = useQuickReply({ setIsErrorState });
   const endChatHandlers = useEndChat(params);
   const fetchHistoryHandlers = useFetchMessageHistory(params);
 

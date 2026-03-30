@@ -14,13 +14,13 @@ describe('useQuickReply', () => {
 
   test('sends reply text to Genesys', () => {
     const reply = 'Yes';
-    const { result } = renderHook(() => useQuickReply());
+    const { result } = renderHook(() => useQuickReply({ setIsErrorState: jest.fn() }));
 
     const preventDefault = jest.fn();
 
     act(() => result.current.handleQuickReply({ preventDefault }, reply));
 
     expect(preventDefault).toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes');
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes', expect.any(Function));
   });
 });

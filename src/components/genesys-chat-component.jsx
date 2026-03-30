@@ -23,7 +23,7 @@ import { useChatUI } from '../hooks/use-chat-ui.js';
  * - onlineText: Text to display when the user comes back online
  * - utmParam: UTM parameters for link tracking by service 
  * - botMetaDisplay: Display name for the digital assistant in the chat UI
- * @param {Function} onChatEnded - Optional callback when chat ends
+ * @param {Function} onChatEnded - Required callback when chat ends
  * @param {object} loadingSpinner - Loading spinner component to display while Genesys is initializing
  * @param {Function} loggingCallback - Callback for logging events (e.g. for analytics)
  * @param {number} maxCharacterLimit - Maximum character limit for user messages (default is 4096, which is the limit for Genesys messages)

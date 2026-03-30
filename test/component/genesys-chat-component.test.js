@@ -624,8 +624,24 @@ describe('Quick replies (structured messages)', () => {
     const yesButton = screen.getByRole('button', { name: /yes/i });
     await userEvent.click(yesButton);
 
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes');
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('Yes', expect.any(Function));
   });
+
+  test('invokes error handler when quick reply fails', async () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+
+    genesysService.sendMessageToGenesys.mockImplementation((_msg, onError) => onError());
+    
+    renderComponent();
+
+    const yesButton = screen.getByRole('button', { name: /yes/i });
+    await userEvent.click(yesButton);
+
+    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+  });
+
 
   test('sends the quick reply text to Genesys when input text is sent', async () => {
     genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>

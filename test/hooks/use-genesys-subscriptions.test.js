@@ -99,7 +99,7 @@ describe('useGenesysSubscriptions', () => {
   test('messages subscription merges, sets indices, agent name, scroll flag, and clears typing', () => {
     const params = baseParams({ genesysIsReady: true });
     getCurrentAgentName.mockReturnValue('Agent Smith');
-    checkChatEnded.mockReturnValue(false);
+    checkChatEnded.mockReturnValue({ hasEnded: false, shouldShowHint: false });
 
     let onMessages;
     genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
@@ -139,7 +139,7 @@ describe('useGenesysSubscriptions', () => {
   test('messages subscription adds disconnected banner when chat has ended', () => {
     const params = baseParams({ genesysIsReady: true });
     getCurrentAgentName.mockReturnValue('Agent Jane');
-    checkChatEnded.mockReturnValue(true);
+    checkChatEnded.mockReturnValue({ hasEnded: true, shouldShowHint: true });
 
     let onMessages;
     genesysService.subscribeToGenesysMessages.mockImplementation(callback => {
@@ -358,7 +358,7 @@ describe('useGenesysSubscriptions', () => {
     });
 
     // Simulate chat end detection
-    checkChatEnded.mockReturnValue(true);
+    checkChatEnded.mockReturnValue({ hasEnded: true, shouldShowHint: true });
 
     renderHook(() => useGenesysSubscriptions(params));
 

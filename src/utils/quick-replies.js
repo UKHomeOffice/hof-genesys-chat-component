@@ -34,12 +34,12 @@ const hideQuickReplyMessageAtIndex = (lastQuickReplyMessageIndex, prevMessages, 
 
 // Mutates messages by setting hideContent=true on all matching messages
 const hidePreviousQuickReplyMessages = (prevMessages) => {
-  prevMessages.forEach((msg) => {
+  return prevMessages.map((msg) => {
     if (isQuickReply(msg)) {
-      msg.hideContent = true;
+      return { ...msg, hideContent: true };
     }
+    return msg;
   });
-  return prevMessages;
 };
 
 const hideHistoricalQuickReplyMessages = (messages) => {

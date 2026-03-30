@@ -15,20 +15,7 @@ const stringsAreEqualIgnoringCase = (str1, str2) => {
   return str1.toLowerCase() === str2.toLowerCase();
 };
 
-
-const isConnectedToAgent = (message) => {
-  return message?.direction === 'Outbound' &&
-    message?.channel?.from?.nickname;
-};
-
-const getCurrentAgentName = (currentMessage) => {
-  if (isConnectedToAgent(currentMessage))
-    return currentMessage.channel.from.nickname;
-};
-
 export {
   formatDate,
-  stringsAreEqualIgnoringCase,
-  isConnectedToAgent,
-  getCurrentAgentName
+  stringsAreEqualIgnoringCase
 };

@@ -50,7 +50,7 @@ describe('useChatActions', () => {
     });
 
     expect(event.preventDefault).toHaveBeenCalled();
-    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('reply-text');
+    expect(genesysService.sendMessageToGenesys).toHaveBeenCalledWith('reply-text', expect.any(Function));
   });
 
   test('handleFetchMessageHistory triggers fetch and calls error callback', () => {

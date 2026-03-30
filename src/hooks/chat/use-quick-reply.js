@@ -6,11 +6,14 @@ import { genesysService } from '../../services/genesys-service';
  * calling sendMessage with the quick reply payload.
  * @returns {Object} use quick reply handler
  */
-export function useQuickReply() {
+export function useQuickReply({ setIsErrorState }) {
   const handleQuickReply = useCallback((event, reply) => {
     event.preventDefault();
-    genesysService.sendMessageToGenesys(reply);
-  }, []);
+    genesysService.sendMessageToGenesys(
+      reply,
+      () => setIsErrorState(true)
+    );
+  }, [setIsErrorState]);
 
   return { handleQuickReply };
 }

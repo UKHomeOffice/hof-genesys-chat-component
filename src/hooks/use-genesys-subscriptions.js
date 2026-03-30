@@ -61,6 +61,11 @@ export function useGenesysSubscriptions({
    */
   const hasShownConnectedBanner = useRef(false);
 
+  /*
+   * Ref to track the previous chat ended state for detecting transitions.
+   */
+  const previousHasEndedRef = useRef(false);
+
   /**
    * Subscribe to Genesys messages received once the Genesys SDK is ready.
    * We pass a callback function to set state with the new messages. As part of this
@@ -78,7 +83,9 @@ export function useGenesysSubscriptions({
           const currentMessages = hidePreviousQuickReplyMessages(prevMessages);
           let newState = [...currentMessages, ...setHideContentPropertyOnAllQuickReplies(newMessages, false)];
           setLastQuickReplyMessageIndex(getQuickReplyIndex(newState));
-          if (checkChatEnded(newState)) {
+          const result = checkChatEnded(newState, previousHasEndedRef.current);
+          previousHasEndedRef.current = result.hasEnded;
+          if (result.shouldShowHint) {
             resetAgentBannerState(hasShownConnectedBanner);
             newState = setAgentDisconnectedBanner(newState, agentDisconnectedText);
           }
