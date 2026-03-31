@@ -1,0 +1,254 @@
+{
+  "messages": [
+    {
+      "text": "Hi, I need help with my recent order.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:01Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000001"
+      },
+      "content": []
+    },
+    {
+      "text": "Sure, can you please provide your order number?",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:10Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000002"
+      },
+      "content": []
+    },
+    {
+      "text": "Yes, it's #123456789.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:20Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000003"
+      },
+      "content": []
+    },
+    {
+      "text": "Thanks, let me check the status of your order.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:30Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000004"
+      },
+      "content": []
+    },
+    {
+      "text": "Okay, I'll wait.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:40Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000005"
+      },
+      "content": []
+    },
+    {
+      "text": "Your order was shipped yesterday and should arrive tomorrow.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:40:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000006"
+      },
+      "content": []
+    },
+    {
+      "text": "Great, thanks for the update!",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:00Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000007"
+      },
+      "content": []
+    },
+    {
+      "text": "Is there anything else I can assist you with?",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:10Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000008"
+      },
+      "content": []
+    },
+    {
+      "text": "Actually, yes. I want to change my delivery address.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:20Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000009"
+      },
+      "content": []
+    },
+    {
+      "text": "No problem. Please provide the new address.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:30Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000010"
+      },
+      "content": []
+    },
+    {
+      "text": "123 New Street, London, UK.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:40Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000011"
+      },
+      "content": []
+    },
+    {
+      "text": "Got it. I've updated your delivery address.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:41:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000012"
+      },
+      "content": []
+    },
+    {
+      "text": "Thanks again!",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:00Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000013"
+      },
+      "content": []
+    },
+    {
+      "text": "You're welcome. Have a great day!",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:10Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000014"
+      },
+      "content": []
+    },
+    {
+      "text": "Wait, one last thing.",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:20Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000015"
+      },
+      "content": []
+    },
+    {
+      "text": "Sure, go ahead.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:30Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000016"
+      },
+      "content": []
+    },
+    {
+      "text": "Can I get a receipt emailed to me?",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:40Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000017"
+      },
+      "content": []
+    },
+    {
+      "text": "Absolutely. What's your email address?",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:42:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000018"
+      },
+      "content": []
+    },
+    {
+      "text": "test@example.com",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:00Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000019"
+      },
+      "content": []
+    },
+    {
+      "text": "Receipt sent! Let me know if you need anything else.",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:10Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000020"
+      },
+      "content": []
+    },
+    {
+      "text": "That's all for now. Thanks!",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:20Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000021"
+      },
+      "content": []
+    },
+    {
+      "text": "You're very welcome!",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:30Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000022"
+      },
+      "content": []
+    },
+    {
+      "text": "Bye!",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:40Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000023"
+      },
+      "content": []
+    },
+    {
+      "text": "Take care!",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:43:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000024"
+      },
+      "content": []
+    },
+    {
+      "text": "You too!",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:44:00Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000025"
+      },
+      "content": []
+    }
+  ]
+}

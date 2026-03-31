@@ -1,0 +1,81 @@
+[
+  {
+    "direction": "Outbound",
+    "text": "Welcome to EVisa webchat, in few word how can i help you today?",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "content": []
+  },
+  {
+    "direction": "Outbound",
+    "text": "Hello and welcome to the EU Settlement Scheme webchat service. Please ask me a question relating to the EUSS. You're communicating with a computer.",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "content": []
+  },
+  {
+    "direction": "Outbound",
+    "text": "Hello and welcome to the ETA webchat service. Please ask me a question relating to the ETA process. You're communicating with a computer. Please do not disclose any personal or sensitive information.",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "content": []
+  },
+  {
+    "direction": "Outbound",
+    "text": "Great, this current price for visa categories varies on type of visa",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "content": []
+  },
+  {
+    "direction": "Outbound",
+    "text": "Ok, wait while i connect you to an available live agent",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "content": []
+  },
+  {
+    "direction": "Outbound",
+    "text": "Good afternoon Karen, i'm Chris and how can i help you today?",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z",
+      "from": {
+        "nickname": "Chris"
+      }
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "content": []
+  }
+]

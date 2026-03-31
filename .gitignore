@@ -1,0 +1,17 @@
+dist/
+node_modules/
+coverage/
+*.env
+.env.*
+.DS_Store
+*.code-workspace
+.idea/
+output/
+*.iml
+.nyc_output/
+.vscode/
+.vscode-server/
+yarn-error.log
+test/_accessibility/tmp/*
+sandbox/
+*.tgz

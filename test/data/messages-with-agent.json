@@ -1,0 +1,54 @@
+{
+  "messages": [
+    {
+      "text": "Welcome to the webchat, in few word how can i help you today?",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:39:00Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000000"
+      },
+      "originatingEntity": "Bot",
+      "content": []
+    },
+    {
+      "text": "Hello, I need help with my application",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:39:15Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000000"
+      },
+      "content": []
+    },
+    {
+      "text": "Ok, for more information please see the documentation on our home page",
+      "messageType": "outbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:39:30Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000000"
+      },
+      "originatingEntity": "Bot",
+      "content": []
+    },
+    {
+      "text": "Please connect me to an agent",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000000"
+      },
+      "content": []
+    },
+    {
+      "text": "human",
+      "type": "Banner",
+      "direction": "Outbound",
+      "originatingEntity": "Human",
+      "connected": true,
+      "content": []
+    }
+  ]
+}

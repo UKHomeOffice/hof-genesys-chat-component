@@ -1,0 +1,95 @@
+[
+  {
+    "text": "Did this answer your question?",
+    "channel": {
+      "time": "2025-07-31T09:39:30Z",
+      "type": "Private"
+    },
+    "content": [
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "Yes",
+          "text": "Yes"
+        }
+      },
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "No",
+          "text": "No"
+        }
+      }
+    ],
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "type": "Structured",
+    "direction": "Outbound"
+  },
+  {
+    "text": "Did this answer your question?",
+    "channel": {
+      "time": "2025-07-31T09:39:30Z",
+      "type": "Private"
+    },
+    "content": [
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "Yes",
+          "text": "Yes"
+        }
+      },
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "No",
+          "text": "No"
+        }
+      }
+    ],
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "type": "Structured",
+    "direction": "Outbound"
+  },
+  {
+    "text": "Did this answer your question?",
+    "channel": {
+      "time": "2025-07-31T09:39:30Z",
+      "type": "Private"
+    },
+    "content": [
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "Yes",
+          "text": "Yes"
+        }
+      },
+      {
+        "contentType": "QuickReply",
+        "quickReply": {
+          "action": "Message",
+          "payload": "No",
+          "text": "No"
+        }
+      }
+    ],
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "originatingEntity": "Bot",
+    "type": "Structured",
+    "direction": "Outbound"
+  }
+]

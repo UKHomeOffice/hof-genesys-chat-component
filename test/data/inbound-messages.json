@@ -1,0 +1,38 @@
+[
+  {
+    "direction": "Inbound",
+    "text": "What's the price for this service",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:38:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "content": []
+  },
+  {
+    "direction": "Inbound",
+    "text": "The Chat interface displays messages in a clear, readable format Messages are grouped by sender with clear differentiation (e.g. user messages on the right, recipient messages on the left)",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:41:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "content": []
+  },
+  {
+    "direction": "Inbound",
+    "text": "Please connect me to an agent",
+    "type": "Text",
+    "channel": {
+      "time": "2025-07-31T09:42:00Z"
+    },
+    "metadata": {
+      "correlationId": "00000000-0000-0000-0000-000000000000"
+    },
+    "content": []
+  }
+]

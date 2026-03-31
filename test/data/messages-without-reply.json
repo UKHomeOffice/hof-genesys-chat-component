@@ -1,0 +1,166 @@
+{
+  "messages": [
+    {
+      "text": "Hello and welcome to the ETA webchat service. Please ask me a question relating to the ETA process. You’re communicating with a computer. Please do not disclose any personal or sensitive information.",
+      "type": "Text",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "metadata": {},
+      "originatingEntity": "Bot",
+      "messageType": "outbound"
+    },
+    {
+      "text": "Hello tell me about your platform",
+      "messageType": "inbound",
+      "type": "text",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "metadata": {
+        "correlationId": "00000000-0000-0000-0000-000000000000"
+      }
+    },
+    {
+      "text": "You will usually get a decision within 3 working days. However, it may be quicker or take longer than 3 days. If you need to travel soon, you must apply before you travel to the UK. You can travel to the UK while waiting for a decision. ",
+      "type": "Text",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "metadata": {},
+      "originatingEntity": "Bot",
+      "messageType": "outbound"
+    },
+    {
+      "text": "Did this answer your question?",
+      "content": [
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "Yes",
+            "payload": "Yes",
+            "action": "Message"
+          }
+        },
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "No",
+            "payload": "No",
+            "action": "Message"
+          }
+        }
+      ],
+      "type": "Structured",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "metadata": {},
+      "originatingEntity": "Bot",
+      "messageType": "outbound"
+    },
+    {
+      "text": "Would you like to chat with one of our ETA advisors?",
+      "content": [
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "Yes",
+            "payload": "Yes",
+            "action": "Message"
+          }
+        },
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "No",
+            "payload": "No",
+            "action": "Message"
+          }
+        }
+      ],
+      "originatingEntity": "Bot",
+      "type": "Structured",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "messageType": "outbound",
+      "metadata": {}
+    },
+    {
+      "text": "Did this answer your question?",
+      "content": [
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "Yes",
+            "payload": "Yes",
+            "action": "Message"
+          }
+        },
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "No",
+            "payload": "No",
+            "action": "Message"
+          }
+        }
+      ],
+      "originatingEntity": "Bot",
+      "type": "Structured",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "messageType": "outbound",
+      "metadata": {}
+    },
+    {
+      "text": "Did this answer your question?",
+      "content": [
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "Yes",
+            "payload": "Yes",
+            "action": "Message"
+          }
+        },
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "No",
+            "payload": "No",
+            "action": "Message"
+          }
+        }
+      ],
+      "originatingEntity": "Bot",
+      "type": "Structured",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "messageType": "outbound",
+      "metadata": {}
+    },
+    {
+      "text": "Would you like to chat with one of our ETA advisors?",
+      "content": [
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "Yes",
+            "payload": "Yes",
+            "action": "Message"
+          }
+        },
+        {
+          "contentType": "QuickReply",
+          "quickReply": {
+            "text": "No",
+            "payload": "No",
+            "action": "Message"
+          }
+        }
+      ],
+      "originatingEntity": "Bot",
+      "type": "Structured",
+      "direction": "Outbound",
+      "timestamp": "2025-07-31T09:39:50Z",
+      "messageType": "outbound",
+      "metadata": {}
+    }
+  ]
+}

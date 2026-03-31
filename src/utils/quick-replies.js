@@ -1,0 +1,63 @@
+// Common predicate for identifying a structured outbound message with content
+const isQuickReply = (msg) =>
+  msg?.direction === 'Outbound' &&
+  msg?.type === 'Structured' &&
+  Boolean(msg?.content);
+
+// Set hideContent on ALL quick reply buttons
+const setHideContentPropertyOnAllQuickReplies = (messages, boolValue) =>
+  messages.map((message) =>
+    isQuickReply(message)
+      ? { ...message, hideContent: boolValue }
+      : message
+  );
+
+// Find LAST structured outbound message index
+const getQuickReplyIndex = (messages) => {
+  return [...messages]
+    .map((message, index) => ({ message, index }))
+    .reverse()
+    .find(({ message }) => isQuickReply(message))?.index ?? -1;
+};
+
+// Set hideContent on a specific message index (returns new array)
+const hideQuickReplyMessageAtIndex = (lastQuickReplyMessageIndex, prevMessages, boolValue) => {
+  return prevMessages.map((message, index) =>
+    index === lastQuickReplyMessageIndex && message?.content
+      ? {
+        ...message,
+        hideContent: boolValue,
+      }
+      : message
+  );
+};
+
+// Returns new array of messages with all previous quick replies hidden.
+const hidePreviousQuickReplyMessages = (prevMessages) => {
+  return prevMessages.map((msg) => {
+    if (isQuickReply(msg)) {
+      return { ...msg, hideContent: true };
+    }
+    return msg;
+  });
+};
+
+const hideHistoricalQuickReplyMessages = (messages) => {
+  const withAllHidden = setHideContentPropertyOnAllQuickReplies(messages, true);
+  const index = getQuickReplyIndex(withAllHidden);
+
+  if (index === -1) {
+    return withAllHidden;
+  }
+
+  // Unhide the last quick reply
+  return hideQuickReplyMessageAtIndex(index, withAllHidden, false);
+};
+
+export {
+  getQuickReplyIndex,
+  setHideContentPropertyOnAllQuickReplies,
+  hideQuickReplyMessageAtIndex,
+  hidePreviousQuickReplyMessages,
+  hideHistoricalQuickReplyMessages,
+};
