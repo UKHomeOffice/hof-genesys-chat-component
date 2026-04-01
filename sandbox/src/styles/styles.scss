@@ -1,0 +1,24 @@
+@use 'message';
+@use 'chat-form';
+@use 'typing';
+@use 'button';
+@use 'error-component';
+@use 'cookies';
+@use 'phase-banner';
+@use 'end-chat-modal';
+@use 'media-query';
+
+$govuk-assets-path: '/assets/';
+
+@import "govuk-frontend/dist/govuk/index";
+@import '@hods/sass-base';
+
+.govuk-body {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  // margin-bottom: 0px;
+}
+
+.govuk-textarea--error {
+  border: 3px solid #d4351c;
+}

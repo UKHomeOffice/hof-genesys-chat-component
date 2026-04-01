@@ -1,0 +1,30 @@
+button.message-button {
+    background-color: #1d70b8;
+}
+
+button.message-button:hover {
+    background-color: #5694ca;
+}
+
+.select-question {
+    margin-top: 20px;
+    margin-bottom: 0px;
+    width: 100%;
+    height: 100px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+}
+
+@media (width >=40.0625em) {
+    .select-question {
+        justify-content: center;
+        height: 42px;
+        width: 100%;
+    }
+
+    button.message-button {
+        width: 120px;
+        margin-bottom: 0px;
+    }
+}

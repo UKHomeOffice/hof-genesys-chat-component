@@ -13,5 +13,4 @@ output/
 .vscode-server/
 yarn-error.log
 test/_accessibility/tmp/*
-sandbox/
 *.tgz

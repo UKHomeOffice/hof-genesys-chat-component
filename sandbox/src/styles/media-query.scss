@@ -1,0 +1,41 @@
+/* Responsive for small screens */
+@media (max-width: 600px) {
+  .messenger-buttons {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .messenger-buttons .govuk-button {
+    width: 100%;
+  }
+
+  .messenger-buttons .govuk-button#end-chat-button {
+    order: 1;
+    margin-top: -20px;
+  }
+
+  #chat-messenger-form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #message-input,
+  #send-button {
+    width: 100%;
+  }
+
+  .chat-hint-message>p {
+    padding-left: 0%;
+    padding-right: 0%;
+  }
+}
+
+
+
+@media (min-width: 601px) {
+  .chat-hint-message>p {
+    padding-left: 20%;
+    padding-right: 20%;
+  }
+
+}
