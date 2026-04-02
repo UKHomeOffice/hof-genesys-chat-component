@@ -1,0 +1,57 @@
+# Source code (shipped as dist/)
+src/
+
+# Testing
+test/
+coverage/
+*.test.js
+jest.setup.js
+jest.config.json
+babel.jest.config.json
+
+# Development and sandbox
+sandbox/
+docs/
+
+# Build and configuration
+rollup.config.mjs
+sonar-project.properties
+.editorconfig
+pull-request-template.md
+
+# Version control
+.git/
+.gitignore
+
+# GitHub
+.github/
+
+# Environment
+*.env
+.env.*
+.envrc
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependencies and caching
+node_modules/
+.npm/
+.cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor and IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# Build artifacts
+*.tgz
+*.tar.gz

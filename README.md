@@ -828,6 +828,49 @@ yarn add hof-genesys-chat-component-v<version>.tgz
 # Install the newly package bundle as a dependency
 ```
 
-13. Contributing
+# 13. Contributing
+
+## Changelog
+
+**Please update the CHANGELOG.md with information detailing the changes being made**
+
+The purpose of the changelog is to document changes that have been implemented to the component library over time. The following format should be used:
+
+```markdown
+## 2026-04-02, Version 0.1.0 (Stable), @github_username
+
+### Added
+- Implemented automated tagging and publishing to NPM
+
+### Changed
+- Updated README to include additional contributing notes
+```
+
+Common categories used:
+* **Added** -> new features implemented
+* **Changed** -> changes or enhancements to existing files
+* **Security** -> specific fixes for security, e.g. updating dependencies
+* **Testing** -> increasing test coverage or modifying tests
+* **Fixed** -> fixing known bugs or issues
+
+## Committing Changes
+
+The CI/CD process uses the commit message to determine the appropriate tag when publishing a new version to NPM. The tag conforms to semantic versioning. Please use the following commit message style when pushing new changes. (example given below)
+
+Patch change
+```bash
+git commit -m "[PATCH] update patch version in X dependency"
+```
+
+Minor/feature change
+
+```bash
+git commit -m "[MINOR] adding optional Genesys subscription"
+```
+
+Major
+```bash
+git commit -m "[MAJOR] removing genesys subscription (breaking change)"
+```
 
 Please use the [pull request template](./pull-request-template.md) when raising a pull request for any changes.
