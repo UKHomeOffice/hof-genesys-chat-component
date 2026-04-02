@@ -6,7 +6,10 @@
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "files": [
-    "dist"
+    "dist",
+    "package.json",
+    "CHANGELOG.md",
+    "LICENSE"
   ],
   "exports": {
     ".": {
