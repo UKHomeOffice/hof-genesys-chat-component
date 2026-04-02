@@ -1,6 +1,6 @@
 {
   "name": "hof-genesys-chat-component",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Home Office",
   "description": "Reusable Genesys chat component library with GDS styling for Home Office services",
   "main": "dist/index.cjs",
@@ -21,7 +21,8 @@
     "build": "rm -rf dist && rollup -c",
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "test": "TZ=UTC jest --coverage"
+    "test": "TZ=UTC jest --coverage",
+    "postversion:ci": "git push && git push --tags"
   },
   "keywords": [
     "genesys",
