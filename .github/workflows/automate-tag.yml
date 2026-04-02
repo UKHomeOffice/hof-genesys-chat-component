@@ -38,7 +38,7 @@ jobs:
       - run: |
           git config --local user.email "$(git log --format='%ae' HEAD^!)"
           git config --local user.name "$(git log --format='%an' HEAD^!)"
-          yarn version --patch
+          npm version patch
 
   auto-tag-minor:
     needs: test
@@ -56,7 +56,7 @@ jobs:
       - run: |
           git config --local user.email "$(git log --format='%ae' HEAD^!)"
           git config --local user.name "$(git log --format='%an' HEAD^!)"
-          yarn version --minor
+          npm version minor
 
   auto-tag-major:
     needs: test
@@ -74,4 +74,4 @@ jobs:
       - run: |
           git config --local user.email "$(git log --format='%ae' HEAD^!)"
           git config --local user.name "$(git log --format='%an' HEAD^!)"
-          yarn version --major
+          npm version major
