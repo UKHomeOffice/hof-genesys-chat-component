@@ -1,0 +1,14 @@
+.end-chat-modal-backdrop {
+  position: "fixed";
+  inset: 0;
+  background: "rgba(0,0,0,0.5)";
+}
+
+.end-chat-modal {
+  border: 2px solid;
+}
+
+.end-chat-modal-buttons {
+  display: flex;
+  gap: 10px;
+}

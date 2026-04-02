@@ -1,0 +1,70 @@
+.chat-messages {
+  height: 400px;
+  overflow-y: scroll;
+}
+
+.chat-form-container {
+  margin-top: 0px;
+  margin-bottom: 30px;
+  padding: 20px;
+  padding-left: unset;
+  padding-right: unset;
+}
+
+/* Form layout */
+#chat-messenger-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+/* Label styling */
+#chat-messenger-form .govuk-label {
+  width: 50%;
+  margin-bottom: 5px;
+}
+
+/* Input styling */
+#message-input {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+.messenger-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* Send button styling */
+#send-button {
+  height: 40px;
+  padding: 0 15px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* End chat button */
+#end-chat-button {
+  background-color: #e0e0e0;
+  color: #0b0c0c;
+  border-color: #b1b4b6;
+  height: 40px;
+}
+
+#end-chat:hover {
+  background-color: #d6d6d6;
+  border-color: #a1a1a1;
+}
+
+
+.label-section {
+  display: flex;
+  justify-content: space-between;
+}
+
+.label-section>div>p {
+  margin-bottom: 0px;
+}

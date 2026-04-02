@@ -59,6 +59,8 @@
     - [10.9 ConversationProvider](#109-conversationprovider)
 11. [Known Behaviours & Edge Cases](#11-known-behaviours--edge-cases)
 12. [Development](#12-development)
+13. [Sandbox](#13-sandbox)
+14. [Contributing](#14-contributing)
 
 ---
 
@@ -743,7 +745,14 @@ The ConversationProvider component is a React context provider that makes the cu
 
 # 12. Development
 
+There is a [sandbox app](./sandbox/README.md) within the root of this library. The purpose of the sandbox is to provide a local service which implements the hof-genesys-chat-component in order to quickly test changes made to the core component code. 
+
 ## Build
+
+If not previously installed, install the dependencies
+```bash
+yarn install
+```
 
 The library is bundled with [Rollup](https://rollupjs.org/) and outputs two formats so it works in both ESM and CommonJS consuming environments.
 ```bash
@@ -793,11 +802,16 @@ Rollup processes `src/index.js` through four plugins in order:
 | `yarn run lint:fix` | Runs ESLint with auto-fix. |
 
 
-### Testing Development Changes
 
-For testing any local changes during development, use the sandbox (TODO) project.
+# 13. Sandbox
 
-Steps
+There is a [sandbox app](./sandbox/README.md) within the root of this library. The purpose of the sandbox is to provide a local service which implements the hof-genesys-chat-component in order to quickly test changes made to the core component code. 
+
+For testing any local changes during development, use the sandbox project.
+
+Steps 
+
+**Skip step 1 if you've not made any changes and just want to build the component for testing in the sandbox.**
 
 1. Bump the patch version 
 ```bash 
@@ -822,9 +836,14 @@ yarn pack
 # Creates a .tgz bundle of the dist/ folder
 ```
 
-5. Install the new package into the sandbox (TODO)
+**Now complete the following steps in the sandbox folder.**
 ```bash
-yarn add hof-genesys-chat-component-v<version>.tgz
+cd sandbox
+````
+
+5. Install the new package into the sandbox 
+```bash
+yarn add ../hof-genesys-chat-component-v<version>.tgz
 # Install the newly package bundle as a dependency
 ```
 

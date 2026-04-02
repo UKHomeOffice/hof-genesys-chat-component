@@ -1,0 +1,87 @@
+:root {
+  --dark-color-a: #667aff;
+  --dark-color-b: #7386ff;
+  --light-color: #cce9ff;
+  --success-color: #5cb85c;
+  --error-color: #d9534f;
+  --light-grey: #f3f2f1;
+  --pure-black: #000000;
+}
+
+.inbound-message-wrapper,
+.outbound-message-wrapper {
+  display: flex;
+  flex-direction: column;
+  margin: 10px 0;
+  margin-bottom: 30px;
+}
+
+.inbound-message-wrapper {
+  align-items: flex-end;
+}
+
+.outbound-message-wrapper {
+  align-items: flex-start;
+}
+
+.inbound-message,
+.outbound-message,
+.agent-typing-indicator {
+  color: var(--pure-black);
+  padding: 1em 1em;
+  max-width: 60%;
+}
+
+.agent-typing-indicator {
+  border-radius: 10px 10px 0 10px;
+}
+
+.inbound-message {
+  background-color: var(--light-color);
+}
+
+.outbound-message,
+.agent-typing-indicator {
+  background-color: var(--light-grey);
+}
+
+.inbound-meta-data,
+.outbound-meta-data {
+  font-size: 1rem;
+  color: #050505;
+  margin-top: 2px;
+}
+
+p.outbound-meta-data,
+p.inbound-meta-data {
+  margin-top: 15px;
+}
+
+p.inbound-message,
+p.outbound-message {
+  margin-bottom: 0px;
+}
+
+.inbound-meta-data {
+  text-align: right;
+}
+
+.outbound-meta-data {
+  text-align: left;
+}
+
+button.fetch-history-button {
+  margin: 10px 0;
+}
+
+.chat-hint-message {
+  width: 100%;
+  color: black;
+  text-align: center;
+  padding: 5px 0;
+  font-family: GDS Transport;
+}
+
+.load-messages-section {
+  text-align: center;
+}
