@@ -53,10 +53,9 @@
     - [10.3 Logging Integration](#103-logging-integration)
     - [10.4 onChatEnded Callback](#104-onchatended-callback)
     - [10.5 Custom Error Component](#105-custom-error-component)
-    - [10.6 localStorageKey Uniqueness](#106-localstorage-key-uniqueness)
     - [10.7 CSS / Styling](#107-css--styling)
-    - [10.8 Exported Utilities](#108-exported-utilities)
-    - [10.9 ConversationProvider](#109-conversationprovider)
+    - [10.7 Exported Utilities](#108-exported-utilities)
+    - [10.8 ConversationProvider](#109-conversationprovider)
 11. [Known Behaviours & Edge Cases](#11-known-behaviours--edge-cases)
 12. [Development](#12-development)
 13. [Sandbox](#13-sandbox)
@@ -173,17 +172,20 @@ document.head.appendChild(script);
 
 Conversation initialisation follows a strict ordered sequence mandated by the Genesys SDK:
 
-1. Subscribe to `MessagingService.ready` — the SDK raises this once the script has bootstrapped.
-2. Within the ready callback: check `localStorage` for an existing session key. If found, fire `onGenesysReady()` immediately. If not, call `MessagingService.startConversation`.
-3. Register session-clearing subscriptions (`sessionCleared`, `conversationReset`, `conversationCleared`) — these remove the `localStorage` key whenever Genesys invalidates the session.
+1. Check for an existing active session
+    1. If the Genesys managed key in localStorage exists, return `onGenesysReady()` immediately and add a storage listener to listen for session key updates which indicate a session was ended in another tab.
+2. If no active session exists, subscribe to `MessagingService.ready` — the SDK raises this once the script has bootstrapped.
+3. Within the ready callback
+    1. Call `MessagingService.startConversation`.
+    2. Register session-clearing subscriptions (`sessionCleared`, `conversationReset`, `conversationCleared`).
+    3. Add a storage listener to listen for session key updates which indicate a session was ended in another tab.
 
 ### 2.3 Session Persistence Strategy
 
-The library tracks whether a Genesys conversation is active using a caller-supplied `localStorage` key. This decouples session tracking from the Genesys SDK internal state, giving the consuming service full control over the key name.
+The library tracks whether a Genesys conversation is active using a Genesys managed `localStorage` key. This abstracts the session tracking away from the implementation and leaves it to the Genesys SDK internal state. The managed key follows a specific pattern: `_DEPLOYMENT_ID:gcmcsessionAction` (where `DEPLOYMENT_ID` is the Genesys deployment ID).
 
 | Storage | Key | Contents | Cleared when |
 |---|---|---|---|
-| `localStorage` | `serviceMetadata.localStorageKey` | `"true"` (session active flag) | User ends chat, or SDK fires a session-clearing event |
 | `sessionStorage` | `"conversationId"` | UUID v4 per session | User ends chat (`removeConversationId()`) |
 
 ### 2.4 GenesysService API Reference
@@ -195,11 +197,11 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 | `setLogger(fn)` | `fn: ({level, message, metadata}) => void` | Attaches a custom logging callback. Called automatically from `GenesysChatComponent` when `loggingCallback` prop is supplied. |
 | `setDebugMode(bool)` | `bool: boolean` | Enables Genesys SDK debug output. Called automatically from `GenesysChatComponent` when `debugMode` prop is supplied. |
 | `loadGenesysScript(env, id)` | `environment: string, deploymentId: string` | Injects the Genesys bootstrap script. Called once by `useGenesysInitialization`. |
-| `initialiseGenesysConversation(onReady, onError, key)` | Callbacks + localStorage key | Subscribes to `MessagingService.ready` and starts or resumes a conversation. |
-| `startConversation(key, onError, onReady)` | Callbacks + localStorage key | Issues `MessagingService.startConversation` command. |
+| `initialiseGenesysConversation(onReady, onError, deploymentId)` | Callbacks + deploymentId | Subscribes to `MessagingService.ready` and starts or resumes a conversation. |
+| `startConversation(key, onError, onReady)` | Callbacks | Issues `MessagingService.startConversation` command. |
 | `sendMessageToGenesys(message, onError)` | `message: string, onError: fn` | Sends a user message via `MessagingService.sendMessage`. |
 | `fetchMessageHistory(onError)` | `onError: fn` | Triggers `MessagingService.fetchHistory` to load older messages. |
-| `clearConversation(key)` | `key: string` | Clears the Genesys conversation and removes `localStorage`/`sessionStorage` entries. |
+| `clearConversation(key)` | `key: string` | Clears the Genesys conversation and removes the current conversationId. |
 | `subscribeToGenesysMessages(cb)` | `cb: (messages[]) => void` | Receives new live messages as they arrive. |
 | `subscribeToGenesysOldMessages(cb, onComplete)` | Two callbacks | Receives paginated history batches and fires `onComplete` when all history is loaded. |
 | `subscribeToSessionRestored(cb)` | `cb: (data) => void` | Fires on page refresh/reload with the most recent 25 messages. |
@@ -208,7 +210,9 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 | `subscribeAgentTyping(cb)` | `cb: () => void` | Fires on `typingReceived` (agent has started typing). |
 | `unSubscribeAgentTyping(cb)` | `cb: () => void` | Fires on `typingTimeout` (agent stopped typing). |
 | `subscribeToErrors(cb)` | `cb: (data) => void` | Fires on any `MessagingService.error` event. |
-| `registerForSessionClearingEvents(key)` | `key: string` | Subscribes to all three session-clearing events and removes `localStorage` key on each. |
+| `registerForSessionClearingEvents(key)` | `key: string` | Subscribes to all three session-clearing events. |
+| `checkActiveSessionExists(deploymentId)` | `deploymentId: string` | Check whether an existing Genesys session is active, using the deployment key to lookup an item in `localStorage` with the following pattern `_deploymentId:gcmcsessionActive`. |
+| `addStorageListenerForSessionStarted(deploymentId, onReady, onError)` | `deploymentId: string` + Callbacks | Add an `eventListener` to the `globalThis` (window) object to check for storage changes across tabs. |
 
 ---
 
@@ -239,7 +243,6 @@ The library tracks whether a Genesys conversation is active using a caller-suppl
 
 | Key | Type | Default | Description |
 |---|---|---|---|
-| `localStorageKey` | `string` | `"genesys_chat_session"` | Key used to flag an active session in `localStorage`. Must be unique per service to avoid cross-service collisions. |
 | `serviceName` | `string` | `""` | Lowercase service identifier (e.g. `"euss"`, `"eta"`). Passed to logging and action hooks for audit context. |
 | `agentConnectedText` | `string` | `"You are now connected to an agent."` | Banner text injected into the message list when an agent joins. |
 | `agentDisconnectedText` | `string` | `"The agent has disconnected."` | Banner text injected when a `Presence.Disconnect` event is detected. |
@@ -259,7 +262,6 @@ export default function ChatPage() {
       genesysEnvironment="euw2.pure.cloud"
       deploymentId="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       serviceMetadata={{
-        localStorageKey: "my_service_chat_session",
         serviceName: "my-service",
         agentConnectedText: "An adviser has joined the chat.",
         botMetaDisplay: "Help assistant",
@@ -330,14 +332,12 @@ Bootstraps the Genesys SDK. Called once at the top level of `GenesysChatComponen
 |---|---|---|
 | `genesysEnvironment` | `string` | Cloud region domain passed to `loadGenesysScript`. |
 | `deploymentId` | `string` | Genesys deployment ID passed to `loadGenesysScript`. |
-| `localStorageKey` | `string` | Session flag key forwarded to `initialiseGenesysConversation`. |
 | `setGenesysIsReady` | `Setter` | Called with `true` once the SDK and conversation are ready. |
 | `setIsErrorState` | `Setter` | Called with `true` if the conversation fails to start. |
 
 **Internal effects:**
 
 - **Effect 1** — dependency `[genesysEnvironment, deploymentId]`: if Genesys global exists, calls `setGenesysIsReady(true)` immediately (script already loaded). Otherwise calls `loadGenesysScript`.
-- **Effect 2** — dependency `[localStorageKey]`: if Genesys global exists, calls `initialiseGenesysConversation`.
 
 ### 5.2 useGenesysSubscriptions
 
@@ -428,25 +428,25 @@ GenesysChatComponent mounts
   │
   └─ useGenesysInitialization()
        │
-       ├─ [Effect 1] globalThis.Genesys exists?
-       │     YES → setGenesysIsReady(true)  ───────────────────────┐
-       │     NO  → loadGenesysScript(env, deploymentId)            │
-       │                                                           │
-       └─ [Effect 2] Genesys loaded                                │
-             │                                                     │
-             └─ initialiseGenesysConversation()                    │
-                   │                                               │
-                   ├─ isInitialized = true                         │
-                   │                                               │
-                   ├─ subscribe: MessagingService.ready            │
-                   │     │                                         │
-                   │     ├─ localStorage key exists?               │
-                   │     │     YES → setGenesysIsReady(true) ──────┤
-                   │     │     NO  → startConversation()           │
-                   │     │               └─ setGenesysIsReady(true)┤
-                   │     └─ registerForSessionClearingEvents()     │
-                   │                                               │
-                   └─ ERROR → setIsErrorState(true)                │
+       ├─ [Effect 1] genesys session key exists?
+       │     YES → setGenesysIsReady(true)
+                   addStorageListenerForSessionStarted() ─────────────────────────┐
+       │     NO  → loadGenesysScript(env, deploymentId)                           │
+       │                                                                          │
+       └─ [Effect 2] Genesys loaded                                               │
+             │                                                                    │
+             └─ initialiseGenesysConversation()                                   │
+                   │                                                              │
+                   ├─ isInitialized = true                                        │
+                   │                                                              │
+                   ├─ subscribe: MessagingService.ready                           │
+                   │     │                                                        │
+                   │     │- startConversation()                                   │
+                   │     │               └─ setGenesysIsReady(true)               |
+                   |     |- addStorageListenerForSessionStarted()                 |
+                   │     └─ registerForSessionClearingEvents()                    │
+                   │                                                              │
+                   └─ ERROR → setIsErrorState(true)                               │
                                                                    ▼
                                                genesysIsReady = TRUE
                                                ─────────────────────
@@ -555,8 +555,7 @@ User confirms in modal
        ├─ event.preventDefault()
        ├─ setShowEndChatModal(false)
        ├─ genesysService.log("info", "Ending conversation...")
-       ├─ genesysService.clearConversation(localStorageKey)
-       │     ├─ localStorage.removeItem(localStorageKey)
+       ├─ genesysService.clearConversation()      
        │     ├─ sessionStorage.removeItem("conversationId")
        │     └─ MessagingService.clearConversation command
        └─ onChatEnded()   ← consuming service callback
@@ -666,7 +665,7 @@ loggingCallback={({ level, message, metadata }) => {
 
 ### 10.4 onChatEnded Callback
 
-The `onChatEnded` prop fires after `clearConversation()` completes. Use it to redirect the user, update parent state, or trigger a satisfaction survey. The session `localStorage` key and `conversationId` are already cleared at the point it fires.
+The `onChatEnded` prop fires after `clearConversation()` completes. Use it to redirect the user, update parent state, or trigger a satisfaction survey. The `conversationId` is already cleared at the point it fires.
 
 ```js
 onChatEnded={() => {
@@ -690,24 +689,11 @@ errorComponent={
 }
 ```
 
-### 10.6 localStorageKey Uniqueness
-
-Each service must supply a unique `localStorageKey`. If two services share a key and a user visits both, the second service may incorrectly detect an active session from the first.
-
-```js
-// ❌ Bad — shared key across services
-localStorageKey: "genesys_chat_session"
-
-// ✅ Good — scoped to service
-localStorageKey: "euss_genesys_session"
-localStorageKey: "eta_genesys_session"
-```
-
-### 10.7 CSS / Styling
+### 10.6 CSS / Styling
 
 The library components use GDS (GOV.UK Design System) class names (`govuk-button`, `govuk-textarea`, etc.). Ensure your service includes the `govuk-frontend` CSS. The library does not ship its own stylesheet — layout classes like `chat-messages`, `chat-form-container`, and `outbound-message-wrapper` must be defined by the consuming service.
 
-### 10.8 Exported Utilities
+### 10.7 Exported Utilities
 
 The following utilities are exported from the library barrel (`index.js`) for use by consuming services that need direct access to session or message data outside the component:
 
@@ -722,7 +708,7 @@ The following utilities are exported from the library barrel (`index.js`) for us
 | `isConnectedToAgent()` | `genesys-agent` | Check if a message originated from a human agent. |
 | `genesysService` (singleton) | `genesys-service` | Direct SDK access — use with caution; prefer the component API. |
 
-### 10.9 ConversationProvider
+### 10.8 ConversationProvider
 
 The ConversationProvider component is a React context provider that makes the current `conversationId` available anywhere in the component tree. The primary purpose of this is to track genesys interations per conversation, for audit and metrics.
 

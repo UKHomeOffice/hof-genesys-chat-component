@@ -17,7 +17,6 @@ export default function Sandbox() {
         genesysEnvironment={import.meta.env.VITE_GENESYS_ENVIRONMENT}
         deploymentId={import.meta.env.VITE_SANDBOX_DEPLOYMENT_ID}
         serviceMetadata={{
-          localStorageKey: appConfig.sandbox.localStorageKey,
           serviceName: appConfig.sandbox.serviceName,
           agentConnectedText: appConfig.bannerTypeDisplay.human,
           agentDisconnectedText: appConfig.bannerTypeDisplay.agentDisconnected,

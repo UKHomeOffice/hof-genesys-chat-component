@@ -20,8 +20,7 @@ describe('useEndChat', () => {
       useEndChat({
         setShowEndChatModal,
         serviceName: 'eta',
-        onChatEnded,
-        localStorageKey: 'chat-session',
+        onChatEnded
       })
     );
   }
@@ -37,9 +36,7 @@ describe('useEndChat', () => {
     expect(preventDefault).toHaveBeenCalled();
     expect(setShowEndChatModal).toHaveBeenCalledWith(false);
     expect(genesysService.log).toHaveBeenCalled();
-    expect(genesysService.clearConversation).toHaveBeenCalledWith(
-      'chat-session'
-    );
+    expect(genesysService.clearConversation).toHaveBeenCalled();
     expect(onChatEnded).toHaveBeenCalled();
   });
 });

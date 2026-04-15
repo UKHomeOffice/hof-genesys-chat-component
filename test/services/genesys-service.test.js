@@ -5,10 +5,6 @@ jest.mock('../../src/conversation/conversation-storage', () => ({
   removeConversationId: jest.fn(),
 }));
 
-import { 
-  removeConversationId
-} from '../../src/conversation/conversation-storage';
-
 /**
  * A robust in-memory mock of the Genesys global function.
  * - Records all `subscribe` and `command` registrations
@@ -120,26 +116,21 @@ describe('GenesysService', () => {
     });
   });
 
-  it('initialiseGenesysConversation starts conversation when not initialized & Genesys NOT defined', () => {
-    // IMPORTANT: Genesys truly undefined to enter the branch
-    globalThis.Genesys = undefined;
-
-    // Avoid calling into undefined SDK by stubbing startConversation to a no-op
-    const startSpy = jest.spyOn(service, 'startConversation').mockImplementation(() => {});
-
-    service.initialiseGenesysConversation(jest.fn(), jest.fn(), 'LS_KEY');
-
-    expect(startSpy).toHaveBeenCalledWith('LS_KEY', expect.any(Function), expect.any(Function));
-  });
-
   it('initialiseGenesysConversation returns early when an active session exists', () => {
-    globalThis.Genesys = undefined;
-    localStorage.setItem('LS_KEY', 'true');
+    globalThis.Genesys = createGenesysMock();
+
+    localStorage.setItem('_DEPLOY:gcmcsessionActive', JSON.stringify({ value: 'true' }));
+    
+    const onReady = jest.fn();
+    const onError = jest.fn();
 
     const startSpy = jest.spyOn(service, 'startConversation');
-    service.initialiseGenesysConversation(jest.fn(), jest.fn(), 'LS_KEY');
+    const storageListenerSpy = jest.spyOn(service, 'addStorageListenerForSessionStarted');
+    service.initialiseGenesysConversation(onReady, onError, 'DEPLOY');
 
     expect(startSpy).not.toHaveBeenCalled();
+    expect(storageListenerSpy).toHaveBeenCalledWith('DEPLOY', onReady, onError);
+    expect(onReady).toHaveBeenCalled();
   });
 
   it('initialiseGenesysConversation subscribes to ready; on ready starts or calls ready appropriately', () => {
@@ -152,7 +143,7 @@ describe('GenesysService', () => {
     const onError = jest.fn();
 
     // No active session -> should start conversation on ready
-    service.initialiseGenesysConversation(onReady, onError, 'LS');
+    service.initialiseGenesysConversation(onReady, onError, 'DEPLOY');
     expect(service.isInitialized).toBe(true);
 
     // Fire ready
@@ -162,9 +153,11 @@ describe('GenesysService', () => {
     // Since session does not exist yet, startConversation path should execute:
     // Replace internal command callbacks
     const startSpy = jest.spyOn(service, 'startConversation');
+
+    const storageListenerSpy = jest.spyOn(service, 'addStorageListenerForSessionStarted');
     
     // For this test, stub startConversation to directly call onGenesysReady:
-    startSpy.mockImplementation((_ls, _err, readycallback) => readycallback());
+    startSpy.mockImplementation((_err, readycallback) => readycallback());
 
     // Emit again to hit the inner branch deterministically with our stub:
     globalThis.Genesys._emit('MessagingService.ready');
@@ -175,6 +168,7 @@ describe('GenesysService', () => {
       metadata: { conversationId: 'conv-123' },
     });
     expect(onReady).toHaveBeenCalled();
+    expect(storageListenerSpy).toHaveBeenCalledWith('DEPLOY', onReady, onError);
   });
 
   it('startConversation success path', () => {
@@ -186,12 +180,11 @@ describe('GenesysService', () => {
     const ready = jest.fn();
     const error = jest.fn();
 
-    service.startConversation('LS', error, ready);
+    service.startConversation(error, ready);
 
     // drive success
     globalThis.Genesys._success('MessagingService.startConversation');
 
-    expect(localStorage.getItem('LS')).toBe('true');
     expect(ready).toHaveBeenCalled();
     expect(logger).toHaveBeenCalledWith({
       level: 'info',
@@ -209,7 +202,7 @@ describe('GenesysService', () => {
     const ready = jest.fn();
     const error = jest.fn();
 
-    service.startConversation('LS', error, ready);
+    service.startConversation(error, ready);
 
     // drive error
     globalThis.Genesys._error('MessagingService.startConversation');
@@ -400,15 +393,28 @@ describe('GenesysService', () => {
     globalThis.Genesys._emit('MessagingService.typingTimeout');
   });
 
-  it('clearConversation removes session then logs on error path', () => {
+  it('clearConversation logs on success', () => {
     const logger = jest.fn();
     service.setLogger(logger);
     globalThis.Genesys = createGenesysMock();
 
-    const rmSpy = jest.spyOn(service, 'removeActiveSessionFromLocalStorage');
+    service.clearConversation();
 
-    service.clearConversation('LS');
-    expect(rmSpy).toHaveBeenCalledWith('LS');
+    // Drive the success callback on the clear command
+    globalThis.Genesys._success('MessagingService.clearConversation');
+    expect(logger).toHaveBeenCalledWith({
+      level: 'info',
+      message: 'Conversation cleared successfully',
+      metadata: { conversationId: 'conv-123' },
+    });
+  });
+
+  it('clearConversation logs on error', () => {
+    const logger = jest.fn();
+    service.setLogger(logger);
+    globalThis.Genesys = createGenesysMock();
+
+    service.clearConversation();
 
     // Drive the error callback on the clear command
     globalThis.Genesys._error('MessagingService.clearConversation');
@@ -419,35 +425,55 @@ describe('GenesysService', () => {
     });
   });
 
-  it('registerForSessionClearingEvents subscribes to 3 events and clears storage', () => {
+  it('registerForSessionClearingEvents subscribes to 3 events', () => {
     const logger = jest.fn();
     service.setLogger(logger);
     globalThis.Genesys = createGenesysMock();
 
-    const rmSpy = jest.spyOn(service, 'removeActiveSessionFromLocalStorage');
-
-    service.registerForSessionClearingEvents('LS');
+    service.registerForSessionClearingEvents();
 
     globalThis.Genesys._emit('MessagingService.sessionCleared');
     globalThis.Genesys._emit('MessagingService.conversationReset');
     globalThis.Genesys._emit('MessagingService.conversationCleared');
-
-    expect(rmSpy).toHaveBeenCalledTimes(3);
   });
 
-  it('removeActiveSessionFromLocalStorage clears localStorage and conversationId', () => {
+  it('checkActiveSessionExists returns true if session active key is set in localStorage', () => {
+    globalThis.Genesys = createGenesysMock();
+
+    localStorage.setItem('_DEPLOY:gcmcsessionActive', JSON.stringify({ value: 'true' }));
+
+    expect(service.checkActiveSessionExists('DEPLOY')).toBe(true);
+  });
+
+  it('checkActiveSessionExists returns false if no session active key is set in localStorage', () => {
+    globalThis.Genesys = createGenesysMock();
+
+    expect(service.checkActiveSessionExists('DEPLOY')).toBe(false);
+  });
+
+  it('addStorageListenerForSessionStarted triggers startConversation on storage event with correct key and newValue', () => {
     const logger = jest.fn();
     service.setLogger(logger);
+    globalThis.Genesys = createGenesysMock();
 
-    localStorage.setItem('LS', 'true');
-    service.removeActiveSessionFromLocalStorage('LS');
+    const startSpy = jest.spyOn(service, 'startConversation');
 
-    expect(localStorage.getItem('LS')).toBeNull();
-    expect(removeConversationId).toHaveBeenCalled();
+    const deploymentId = 'test-deploy';
+
+    service.addStorageListenerForSessionStarted(deploymentId);
+
+    // Simulate storage event
+    const event = new Event('storage');
+    event.key = `_${deploymentId}:gcmcsessionActive`;
+    event.newValue = JSON.stringify({ value: 'true' });
+
+    globalThis.dispatchEvent(event);
+
     expect(logger).toHaveBeenCalledWith({
-      level: 'debug',
-      message: 'Clearing session key for service LS',
-      metadata: { localStorageKey: 'LS' },
+      level: 'info',
+      message: 'Detected session restart (in another tab)',
+      metadata: { conversationId: 'conv-123' }
     });
+    expect(startSpy).toHaveBeenCalled();
   });
 });

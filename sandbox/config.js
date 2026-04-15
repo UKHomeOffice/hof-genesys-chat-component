@@ -12,7 +12,6 @@ export default {
   maxCharacterLimit: 4096,
   sandbox: {
     definition: 'sandbox-app',
-    localStorageKey: 'sandbox-genesys-session',
     serviceName: 'Sandbox',
     serviceSubText: 'sandbox.',
     errorContactLink: '#',

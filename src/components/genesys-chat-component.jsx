@@ -15,7 +15,6 @@ import { useChatUI } from '../hooks/use-chat-ui.js';
  * 
  * @param {string} deploymentId - The deployment ID for the Genesys instance
  * @param {object} serviceMetadata - An object containing metadata for the implementing service, including: 
- * - localStorageKey: The key to use for storing the chat session in local storage
  * - serviceName: The name of the service (e.g. ETA, eVisa, EUSS)
  * - agentConnectedText: Text to display when an agent connects to the chat
  * - agentDisconnectedText: Text to display when an agent disconnects from the chat
@@ -48,7 +47,6 @@ export default function GenesysChatComponent({
    * properties the consuming service has not provided.
    */
   const destructuredServiceMetadata = useMemo(() => ({
-    localStorageKey: serviceMetadata.localStorageKey || 'genesys_chat_session',
     serviceName: (serviceMetadata.serviceName || '').toLowerCase(),
     agentConnectedText: serviceMetadata.agentConnectedText || 'You are now connected to an agent.',
     agentDisconnectedText: serviceMetadata.agentDisconnectedText || 'The agent has disconnected.',
@@ -107,7 +105,6 @@ export default function GenesysChatComponent({
   useGenesysInitialization({
     genesysEnvironment,
     deploymentId,
-    localStorageKey: destructuredServiceMetadata.localStorageKey,
     setGenesysIsReady,
     setIsErrorState,
   });
@@ -144,8 +141,7 @@ export default function GenesysChatComponent({
     setShowEndChatModal,
     setIsErrorState,
     serviceName: destructuredServiceMetadata.serviceName,
-    onChatEnded,
-    localStorageKey: destructuredServiceMetadata.localStorageKey,
+    onChatEnded
   });
 
   return (

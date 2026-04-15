@@ -14,7 +14,6 @@ describe('useGenesysInitialization', () => {
   const baseParams = () => ({
     genesysEnvironment: 'dev',
     deploymentId: 'DEPLOY_ID',
-    localStorageKey: 'LOCAL_KEY',
     setGenesysIsReady: jest.fn(),
     setIsErrorState: jest.fn(),
   });
@@ -60,7 +59,7 @@ describe('useGenesysInitialization', () => {
     expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledWith(
       expect.any(Function),  // success cb
       expect.any(Function),  // error cb
-      'LOCAL_KEY'
+      'DEPLOY_ID'
     );
   });
 

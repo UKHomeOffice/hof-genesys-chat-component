@@ -31,7 +31,6 @@ describe('useChatActions', () => {
     setIsErrorState: jest.fn(),
     serviceName: 'svc',
     onChatEnded: jest.fn(),
-    localStorageKey: 'KEY',
     ...overrides
   });
 
@@ -170,7 +169,6 @@ describe('useChatActions', () => {
   test('handleEndChat closes modal, logs event, clears conversation, calls callback', () => {
     const params = createParams({
       serviceName: 'svc',
-      localStorageKey: 'KEY',
     });
 
     const { result } = renderHook(() => useChatActions(params));
@@ -189,7 +187,7 @@ describe('useChatActions', () => {
       { service: 'svc' }
     );
 
-    expect(genesysService.clearConversation).toHaveBeenCalledWith('KEY');
+    expect(genesysService.clearConversation).toHaveBeenCalled();
     expect(params.onChatEnded).toHaveBeenCalled();
   });
 });
