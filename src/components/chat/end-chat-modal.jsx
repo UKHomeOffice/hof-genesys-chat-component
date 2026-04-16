@@ -12,6 +12,17 @@ export default function EndChatModal({ showModal, handleCloseModal, handleEndCha
     }
   }, [showModal]);
 
+  /**
+   * Specifically prevent the Escape key from closing the modal, 
+   * as this is a critical action and we want to ensure users make a deliberate choice.
+   * @param {object} event - The keyboard event object 
+   */
+  const handleKeyDown = (event) => {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+    }
+  };
+
   return (
     <>
       {showModal && (
@@ -22,7 +33,7 @@ export default function EndChatModal({ showModal, handleCloseModal, handleEndCha
         className="end-chat-modal"
         id="end-chat-modal"
         data-testid="end-chat-modal"
-        closedby="none">
+        onKeyDown={handleKeyDown}>
         <h1 className="govuk-heading-l" data-testid="end-chat-modal-heading">Do you want to end the chat?</h1>
         <p className="govuk-body">Ending the chat will clear the chat history and refresh the page.</p>
         <p className="govuk-body">Are you sure you want to end the chat?</p>
