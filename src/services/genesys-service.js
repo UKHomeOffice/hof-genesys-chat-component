@@ -77,51 +77,81 @@ export class GenesysService {
    * Once the conversation is started, all other Genesys events and commands can be used.
    * @param {Function} onGenesysReady - Callback when SDK is ready
    * @param {Function} onError - Callback on initialization error
-   * @param {string} localStorageKey - Key for session storage
+   * @param {String} deploymentId - The deployment ID for the Genesys instance
    */
   /* eslint-enable max-len */
-  initialiseGenesysConversation(onGenesysReady, onError, localStorageKey) {
-    if (this.isInitialized || !globalThis.Genesys) {
-      /**
-       * Check for an active session in local storage, if not found start a new conversation.
-       * This covers the specific scenario where a user ends the chat, but then clicks the browser
-       * back button instead of the link to start a new chat. In this case, the Genesys SDK is already and initialised,
-       * but no conversation exists, so we need to start a new one to avoid an issue if the user ends the chat again.
-       */
-      const activeSessionExists = localStorage.getItem(localStorageKey);
-      if (activeSessionExists) {
-        return;
-      }
-      this.startConversation(localStorageKey, onError, onGenesysReady);
+  initialiseGenesysConversation(onGenesysReady, onError, deploymentId) {
+    const activeSessionExists = this.checkActiveSessionExists(deploymentId);
+    if (activeSessionExists) {      
+      this.log(
+        'info', 
+        'Genesys session already active, skipping initialization', 
+        { conversationId: getConversationId() }
+      );
+      onGenesysReady();
+      this.addStorageListenerForSessionStarted(deploymentId, onGenesysReady, onError);
       return;
     }
     this.isInitialized = true;
 
     globalThis.Genesys('subscribe', 'MessagingService.ready', () => {
       this.log('info', 'Genesys SDK configured and ready', { conversationId: getConversationId() });
+      this.startConversation(onError, onGenesysReady);
+      this.registerForSessionClearingEvents();
+      this.addStorageListenerForSessionStarted(deploymentId, onGenesysReady, onError);
+    });
+  }
 
-      const activeSessionExists = localStorage.getItem(localStorageKey);
-      if (activeSessionExists) {
-        onGenesysReady();
-      } else {
-        this.startConversation(localStorageKey, onError, onGenesysReady);
+  /**
+   * Check the existance of an active Genesys session by looking for a specific key in local storage.
+   * The key in local storage is populated by the Genesys SDK upon initialisation. 
+   * It's comprised an underscore as a prefix, followed by the deploymentId and then a fixed string ':gcmcsessionActive'
+   * e.g. `_abc-def-ghi:gcmcsessionActive`
+   * If this key exists in local storage and has the expected value structure, 
+   * we can be confident that there is an active Genesys session.
+   * @param {String} deploymentId - the deployment ID for the Genesys instance
+   * @returns 
+   */
+  checkActiveSessionExists(deploymentId) {
+    const activeSessionKey = `_${deploymentId}:gcmcsessionActive`;
+    const item = localStorage.getItem(activeSessionKey);
+    if (!item) {
+      return false;
+    }
+    try {
+      const parsed = JSON.parse(item);
+      return parsed.value === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Add a storage event listener to detect when a Genesys session is started or ended in another tab.
+   * This ensures that cross-tab session changes are detected and handled appropriately, 
+   * such as starting a conversation when a session is started in another tab.
+   * @param {string} deploymentId 
+   */
+  addStorageListenerForSessionStarted(deploymentId, onGenesysReady, onError) {
+    globalThis.addEventListener('storage', context => {
+      if (context.key === `_${deploymentId}:gcmcsessionActive`) {
+        if (context.newValue) {
+          this.log('info', 'Detected session restart (in another tab)', { conversationId: getConversationId() });
+          this.startConversation(onError, onGenesysReady);
+        }
       }
-
-      this.registerForSessionClearingEvents(localStorageKey);
     });
   }
 
   /**
    * Start a new conversation
-   * @param {string} localStorageKey - Key for session storage
    * @param {Function} onError - Error callback
    * @param {Function} onGenesysReady - Ready callback
    */
-  startConversation(localStorageKey, onError, onGenesysReady) {
+  startConversation(onError, onGenesysReady) {
     globalThis.Genesys('command', 'MessagingService.startConversation',
       () => {
-        this.log('info', 'Conversation started successfully', { conversationId: getConversationId() });
-        localStorage.setItem(localStorageKey, 'true');
+        this.log('info', 'Conversation started successfully', { conversationId: getConversationId() });        
         onGenesysReady();
       },
       () => {
@@ -274,13 +304,14 @@ export class GenesysService {
   /**
    * Clear the conversation in Genesys to clear this conversation session.
    * This will clear all existing messages on the Genesys end: https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-clearconversation
-   * @param {localStorageKey} the key of the local storage item to remove to indicate no active session
    */
   /* eslint-enable max-len */
-  clearConversation(localStorageKey) {
-    this.removeActiveSessionFromLocalStorage(localStorageKey);
+  clearConversation() {
     globalThis.Genesys('command', 'MessagingService.clearConversation',
-      () => { },
+      () => {
+        this.log('info', 'Conversation cleared successfully', { conversationId: getConversationId() });
+        removeConversationId();
+      },
       () => {
         this.log('error', 'Error clearing conversation', { conversationId: getConversationId() });
       }
@@ -294,37 +325,21 @@ export class GenesysService {
    * 2. MessagingService.conversationReset (https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-conversationreset)
    * 3. MessagingService.conversationCleared (https://developer.genesys.cloud/commdigital/digital/webmessaging/messengersdk/SDKCommandsEvents/messagingServicePlugin#messagingservice-conversationcleared)
    * 
-   * The aim here is that if the Genesys session has been cleared in any way, we also remove the custom local storage
-   * key we use to track if there is an active session. This ensures that if the user continues to interact with the chat
-   * after a session clear, a new conversation will be started.
-   * @param {string} localStorageKey the local storage key used to access the active session
+   * The aim here is that if the Genesys session has been cleared in any way.
    */
   /* eslint-enable max-len */
-  registerForSessionClearingEvents(localStorageKey) {
+  registerForSessionClearingEvents() {
     globalThis.Genesys('subscribe', 'MessagingService.sessionCleared', () => {
       this.log('debug', 'Session cleared', { conversationId: getConversationId() });
-      this.removeActiveSessionFromLocalStorage(localStorageKey);
     });
 
     globalThis.Genesys('subscribe', 'MessagingService.conversationReset', () => {
       this.log('debug', 'Conversation reset', { conversationId: getConversationId() });
-      this.removeActiveSessionFromLocalStorage(localStorageKey);
     });
 
     globalThis.Genesys('subscribe', 'MessagingService.conversationCleared', () => {
       this.log('debug', 'Conversation cleared', { conversationId: getConversationId() });
-      this.removeActiveSessionFromLocalStorage(localStorageKey);
     });
-  }
-
-  /**
-   * Remove active session from local storage
-   * @param {string} localStorageKey - Key for session storage
-   */
-  removeActiveSessionFromLocalStorage(localStorageKey) {
-    this.log('debug', `Clearing session key for service ${localStorageKey}`, { localStorageKey });
-    localStorage.removeItem(localStorageKey);
-    removeConversationId();
   }
 }
 

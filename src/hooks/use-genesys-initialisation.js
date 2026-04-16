@@ -10,14 +10,12 @@ import { genesysService } from '../services/genesys-service';
  * 
  * @param {Object} params - Parameters
  * @param {string} deploymentId - Deployment ID
- * @param {string} localStorageKey - Local storage key
  * @param {Function} setGenesysIsReady - Setter for Genesys ready
  * @param {Function} setIsErrorState - Setter for error state
  */
 export function useGenesysInitialization({
   genesysEnvironment,
   deploymentId,
-  localStorageKey,
   setGenesysIsReady,
   setIsErrorState,
 }) {
@@ -41,8 +39,8 @@ export function useGenesysInitialization({
       genesysService.initialiseGenesysConversation(
         () => setGenesysIsReady(true),
         () => setIsErrorState(true),
-        localStorageKey
+        deploymentId        
       );
     }
-  }, [setGenesysIsReady, localStorageKey, setIsErrorState]);
+  }, [setGenesysIsReady, setIsErrorState, deploymentId]);
 }

@@ -67,7 +67,6 @@ afterEach(() => {
 // ---------------------------------------------------------------------------
 
 const SERVICE_METADATA = {
-  localStorageKey: 'test-local-storage-key',
   serviceName: 'ETA',
   agentConnectedText: 'You are now connected to an agent.',
   agentDisconnectedText: 'The agent has disconnected.',
@@ -164,15 +163,6 @@ describe('Initialisation', () => {
     expect(genesysService.setDebugMode).toHaveBeenCalledWith(true);
   });
 
-  test('initialises the conversation with the correct localStorageKey', () => {
-    makeGenesysReady();
-    renderComponent();
-    expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledWith(
-      expect.any(Function),
-      expect.any(Function),
-      'test-local-storage-key'
-    );
-  });
 
   test('applies default service metadata values when none are provided', () => {
     globalThis.Genesys = {};
@@ -191,11 +181,10 @@ describe('Initialisation', () => {
     // The component should not throw and the form should appear
     expect(screen.getByTestId('chat-messenger-form')).toBeInTheDocument();
 
-    // Default localStorageKey is passed to initialiseGenesysConversation
     expect(genesysService.initialiseGenesysConversation).toHaveBeenCalledWith(
       expect.any(Function),
       expect.any(Function),
-      'genesys_chat_session'
+      "id"
     );
   });
 });
@@ -873,7 +862,7 @@ describe('End chat', () => {
     renderComponent();
     await userEvent.click(screen.getByTestId('end-chat-button'));
     await userEvent.click(screen.getByTestId('confirm-end-chat-button'));
-    expect(genesysService.clearConversation).toHaveBeenCalledWith('test-local-storage-key');
+    expect(genesysService.clearConversation).toHaveBeenCalled();
   });
 
   test('calls the onChatEnded callback when end chat is confirmed', async () => {

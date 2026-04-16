@@ -15,7 +15,6 @@ import { useFetchMessageHistory } from './use-message-history';
  * @param {Function} setIsErrorState - Setter for error state
  * @param {string} serviceName - Service name
  * @param {Function} onChatEnded - Callback for chat ended
- * @param {string} localStorageKey - Local storage key
  * @returns {Object} Action handlers
  */
 export function useChatActions(params) {
