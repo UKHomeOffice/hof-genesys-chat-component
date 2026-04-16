@@ -5,8 +5,8 @@ import EndChatModal from '../../../src/components/chat/end-chat-modal';
 
 // Mock the dialog prototype methods as JSDOM does not implement them
 beforeAll(() => {
-  window.HTMLDialogElement.prototype.showModal = jest.fn();
-  window.HTMLDialogElement.prototype.close = jest.fn();
+  globalThis.HTMLDialogElement.prototype.showModal = jest.fn();
+  globalThis.HTMLDialogElement.prototype.close = jest.fn();
 });
 
 describe('EndChatModal component', () => {
@@ -90,5 +90,32 @@ describe('EndChatModal component', () => {
 
     expect(handleEndChat).toHaveBeenCalledTimes(1);
     expect(handleCloseModal).not.toHaveBeenCalled();
+  });
+
+  test('prevents closing of dialog on escape key press', async () => {
+    render(
+      <EndChatModal
+        showModal={true}
+        handleCloseModal={handleCloseModal}
+        handleEndChat={handleEndChat}
+      />
+    );
+    
+    // Clear mocks after initial render setup
+    globalThis.HTMLDialogElement.prototype.close.mockClear();
+    
+    const dialogModal = screen.queryByTestId('end-chat-modal');
+    
+    await userEvent.keyboard('{Escape}');
+
+    // Verify close() was NOT called (preventing the dialog from closing)
+    expect(globalThis.HTMLDialogElement.prototype.close).not.toHaveBeenCalled();
+    
+    // Verify neither handler was triggered
+    expect(handleEndChat).not.toHaveBeenCalled();
+    expect(handleCloseModal).not.toHaveBeenCalled();
+    
+    // Verify dialog is still in the document
+    expect(dialogModal).toBeInTheDocument();
   });
 });
