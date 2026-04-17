@@ -85,6 +85,7 @@ function renderComponent({
   serviceMetadata = SERVICE_METADATA,
   maxCharacterLimit = 4096,
   debugMode = false,
+  errorCallback = jest.fn() 
 } = {}) {
   return render(
     <GenesysChatComponent
@@ -93,7 +94,7 @@ function renderComponent({
       serviceMetadata={serviceMetadata}
       loadingSpinner={<p data-testid="loading-spinner">Loading…</p>}
       onChatEnded={onChatEnded}
-      errorComponent={<p data-testid="error-component">An error has occurred</p>}
+      errorCallback={errorCallback}
       maxCharacterLimit={maxCharacterLimit}
       debugMode={debugMode}
     />
@@ -623,12 +624,13 @@ describe('Quick replies (structured messages)', () => {
 
     genesysService.sendMessageToGenesys.mockImplementation((_msg, onError) => onError());
     
-    renderComponent();
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
 
     const yesButton = screen.getByRole('button', { name: /yes/i });
     await userEvent.click(yesButton);
 
-    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+    expect(componentErrorCallback).toHaveBeenCalled();
   });
 
 
@@ -964,41 +966,58 @@ describe('Error states', () => {
     jest.resetAllMocks();
   })
 
-  test('shows the error component when an SDK error fires', () => {
+  test('fires the error callback when an SDK error fires', () => {
     makeGenesysReady();
 
     genesysService.subscribeToErrors.mockImplementation((callback) => callback());
 
-    renderComponent();
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
 
-    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+    expect(componentErrorCallback).toHaveBeenCalled();
     expect(screen.queryByTestId('chat-messenger-form')).not.toBeInTheDocument();
     expect(screen.queryByTestId('loading-spinner')).not.toBeInTheDocument();
   });
 
-  test('shows the error component when initialisation fails', () => {
+  test('calls the provided errorCallback when isErrorState changes to true', async () => {
+    makeGenesysReady();
+
+    genesysService.subscribeToErrors.mockImplementation((callback) => callback());
+
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
+
+    await waitFor(() => expect(componentErrorCallback).toHaveBeenCalled());
+  });
+
+  test('fires the error callback when initialisation fails', () => {
     globalThis.Genesys = {};
     genesysService.initialiseGenesysConversation.mockImplementation((onReady, onError) => {
       onReady();
       onError();
     });
     genesysService.subscribeToGenesysMessages.mockImplementation((callback) => callback([]));
-    renderComponent();
-    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+    
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
+
+    expect(componentErrorCallback).toHaveBeenCalled();
   });
 
-  test('shows the error component when sendMessageToGenesys fails', async () => {
+  test('fires the error callback when sendMessageToGenesys fails', async () => {
     makeGenesysReady();
     genesysService.sendMessageToGenesys.mockImplementation((_msg, onError) => onError());
-    renderComponent();
+    
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
 
     await userEvent.type(screen.getByTestId('message-input'), 'test');
     await userEvent.click(screen.getByTestId('send-message-button'));
 
-    expect(screen.getByTestId('error-component')).toBeInTheDocument();
+    expect(componentErrorCallback).toHaveBeenCalled();
   });
 
-  test('shows the error component when fetchMessageHistory fails', async () => {
+  test('fires the error callback when fetchMessageHistory fails', async () => {
     makeGenesysReady();
     genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
       callback(largeSetRestoredMessages)
@@ -1009,16 +1028,15 @@ describe('Error states', () => {
       errorCallback = onError;
     });
 
-    renderComponent();
+    const componentErrorCallback = jest.fn();
+    renderComponent({ errorCallback: componentErrorCallback });
 
     const btn = await screen.findByRole('button', { name: /Load more messages/i });
     await userEvent.click(btn);
 
     act(() => { errorCallback(); });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('error-component')).toBeInTheDocument();
-    });
+    expect(componentErrorCallback).toHaveBeenCalled();
   });
 });
 

@@ -9,6 +9,7 @@ import { useGenesysInitialization } from '../hooks/use-genesys-initialisation.js
 import { useGenesysSubscriptions } from '../hooks/use-genesys-subscriptions.js';
 import { useChatActions } from '../hooks/chat/use-chat-actions.js';
 import { useChatUI } from '../hooks/use-chat-ui.js';
+import { useErrorState } from '../hooks/use-error-state.js';
 
 /**
  * A reusable Genesys Chat Component for Home Office services
@@ -27,19 +28,19 @@ import { useChatUI } from '../hooks/use-chat-ui.js';
  * @param {Function} loggingCallback - Callback for logging events (e.g. for analytics)
  * @param {number} maxCharacterLimit - Maximum character limit for user messages (default is 4096, which is the limit for Genesys messages)
  * @param {boolean} debugMode - Flag to enable debug mode on Genesys service for additional logging (default is false)
- * @param {object} errorComponent - Custom error component to display in case of an error
+ * @param {Function} errorCallback - Callback for handling error events
  * @returns {JSX.Element} Genesys Chat Component
  */
 export default function GenesysChatComponent({
   genesysEnvironment,
   deploymentId,
   serviceMetadata = {},
-  onChatEnded = () => {},
+  onChatEnded = () => { },
   loadingSpinner,
-  loggingCallback = () => {},
-  maxCharacterLimit = 4096, 
-  debugMode = false, 
-  errorComponent = {},
+  loggingCallback = () => { },
+  maxCharacterLimit = 4096,
+  debugMode = false,
+  errorCallback = () => { },
 }) {
 
   /*
@@ -94,6 +95,11 @@ export default function GenesysChatComponent({
     setLastHistoryBatchCount
   } = chatState;
 
+  useErrorState({ 
+    isErrorState, 
+    errorCallback 
+  });
+
   const { mergeChatHistory } = useChatUI({
     messages,
     shouldScrollToLatestMessage,
@@ -123,19 +129,19 @@ export default function GenesysChatComponent({
     offlineText: destructuredServiceMetadata.offlineText,
     onlineText: destructuredServiceMetadata.onlineText,
     mergeChatHistory,
-    hasReconnectedRef,    
+    hasReconnectedRef,
     setLastHistoryBatchCount
   });
 
   const {
     sendMessage,
-    handleKeyPress,    
+    handleKeyPress,
     handleQuickReply,
     handleEndChat,
     handleFetchMessageHistory,
   } = useChatActions({
-    userInput,  
-    setUserInput,  
+    userInput,
+    setUserInput,
     setMessages,
     lastQuickReplyMessageIndex,
     setShowEndChatModal,
@@ -146,7 +152,6 @@ export default function GenesysChatComponent({
 
   return (
     <>
-      {isErrorState && errorComponent}
       {!isErrorState && !genesysIsReady && loadingSpinner}
       {!isErrorState && genesysIsReady && (
         <>
