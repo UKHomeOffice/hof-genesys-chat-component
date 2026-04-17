@@ -30,7 +30,8 @@
    - [5.2 useGenesysSubscriptions](#52-usegenesyssubscriptions)
    - [5.3 useChatUI](#53-usechatui)
    - [5.4 useChatActions](#54-usechatactions)
-   - [5.5 useSendMessage — Structured Message Handling](#55-usesendmessage--structured-message-handling)
+   - [5.5 useErrorState](#55-useerrorstate)
+   - [5.6 useSendMessage — Structured Message Handling](#56-usesendmessage--structured-message-handling)
 6. [Message Rendering Pipeline](#6-message-rendering-pipeline)
    - [6.1 Component Resolution](#61-component-resolution)
    - [6.2 Message Component Summary](#62-message-component-summary)
@@ -52,7 +53,7 @@
     - [10.2 Installation](#102-installation)
     - [10.3 Logging Integration](#103-logging-integration)
     - [10.4 onChatEnded Callback](#104-onchatended-callback)
-    - [10.5 Custom Error Component](#105-custom-error-component)
+    - [10.5 Custom Error Callback](#105-custom-error-callback)
     - [10.7 CSS / Styling](#107-css--styling)
     - [10.7 Exported Utilities](#108-exported-utilities)
     - [10.8 ConversationProvider](#109-conversationprovider)
@@ -100,6 +101,7 @@ src/
 ├── hooks/
 │   ├── use-chat-state.js             ← All state & refs
 │   ├── use-chat-ui.js                ← Scroll & history merge
+│   ├── use-error-state.js            ← Handle error state changes
 │   ├── use-genesys-initialisation.js ← SDK boot
 │   ├── use-genesys-subscriptions.js  ← Event wiring
 │   ├── chat/
@@ -227,7 +229,7 @@ The library tracks whether a Genesys conversation is active using a Genesys mana
 | `genesysEnvironment` | `string` | Genesys Cloud region domain (e.g. `"mypurecloud.com"`, `"euw2.pure.cloud"`). |
 | `deploymentId` | `string` | The Genesys Messenger deployment ID for your environment. |
 | `onChatEnded` | `Function` | `() => {}` | Callback fired after the user confirms ending the chat. Use this to redirect or update parent state. |
-| `errorComponent` | `ReactNode` | `{}` | Custom component rendered when `isErrorState` becomes `true` (Genesys SDK error or send failure). |
+| `errorCallback` | `Function` | `{}` | Custom callback to invoke when `isErrorState` becomes `true` (Genesys SDK error or send failure). |
 | `loadingSpinner` | `ReactNode` | `undefined` | Component rendered while Genesys is initialising (`genesysIsReady === false`). |
 | `serviceMetadata` | `object` | `{}` | Service-specific config object. See [Section 3.3](#33-servicemetadata-object). |
 
@@ -269,7 +271,7 @@ export default function ChatPage() {
       onChatEnded={() => navigate("/chat-ended")}
       loggingCallback={(log) => analyticsService.log(log)}
       loadingSpinner={<Spinner />}
-      errorComponent={<ErrorBanner />}
+      errorCallback={() => {}}
     />
   );
 }
@@ -376,7 +378,16 @@ A façade hook that composes the four action sub-hooks and returns a flat API su
 | `handleEndChat(event)` | `useEndChat` | Closes the modal, logs the event, calls `clearConversation`, and fires `onChatEnded()`. |
 | `handleFetchMessageHistory()` | `useFetchMessageHistory` | Calls `genesysService.fetchMessageHistory()`. Triggered by the Load More button. |
 
-### 5.5 useSendMessage — Structured Message Handling
+### 5.5 useErrorState
+
+A simple custom hook for handling changes to error state, with a specific single responsibility of handling the calling of the invocation of the supplied `errorCallback` from the consuming service.
+
+| Returned handler | Source hook | Description |
+|---|---|---|
+| `useErrorState(isErrorState, errorCallback)` | `useErrorState` | Checks value of `isErrorState` and invokes `errorCallback` if `true` |
+
+
+### 5.6 useSendMessage — Structured Message Handling
 
 When the user sends a message, if `lastQuickReplyMessageIndex` is not `-1` (i.e. there is a visible quick-reply message), the hook calls `hideQuickReplyMessageAtIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
 
@@ -677,16 +688,12 @@ onChatEnded={() => {
 }}
 ```
 
-### 10.5 Custom Error Component
+### 10.5 Custom Error Callback
 
-Pass a React element as `errorComponent`. It renders when `isErrorState` becomes `true` (Genesys SDK error, failed conversation start, or send failure). The default value is an empty object `{}`, which renders nothing — always supply a meaningful error UI in production.
+Pass a function as `errorCallback`. It invokes when `isErrorState` becomes `true` (Genesys SDK error, failed conversation start, or send failure). The default value is an empty function `() => {}`, which invokes nothing — always supply a meaningful callback in production.
 
 ```jsx
-errorComponent={
-  <div role="alert" className="govuk-error-summary">
-    <p>The chat service is temporarily unavailable. Please try again later.</p>
-  </div>
-}
+errorCallback={() => {}}
 ```
 
 ### 10.6 CSS / Styling
