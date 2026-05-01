@@ -212,56 +212,30 @@ describe('Messages', () => {
   });
 
   describe('Load more messages button', () => {
-    test('does not show the button when historicalMessages is empty', () => {
-      render(<Messages {...defaultProps} historicalMessages={[]} />);
+    test('shows the button when history is not fully fetched and batch count is 25', () => {
+      render(<Messages {...defaultProps} allHistoryFetched={false} lastHistoryBatchCount={25} />);
+      expect(screen.getByTestId('load-more-btn')).toBeInTheDocument();
+    });
+
+    test('does not show the button when batch count is below 25', () => {
+      render(<Messages {...defaultProps} allHistoryFetched={false} lastHistoryBatchCount={24} />);
       expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
     });
 
-    test('does not show the button when fewer than 24 historical messages', () => {
+    test('shows the button for short batch after user has sent a message', () => {
       render(
         <Messages
           {...defaultProps}
           allHistoryFetched={false}
-        />
-      );
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('shows the button when there are 24 or more historical messages and history is not fully fetched', () => {
-      render(
-        <Messages
-          {...defaultProps}
-          allHistoryFetched={false}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
+          hasUserSentMessageSinceLastHistoryComplete={true}
+          lastHistoryBatchCount={23}
         />
       );
       expect(screen.getByTestId('load-more-btn')).toBeInTheDocument();
     });
 
-    test('does not show the button when history is fully fetched, even with 24+ messages', () => {
-      render(
-        <Messages
-          {...defaultProps}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
-          allHistoryFetched={true}
-        />
-      );
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('excludes eventType messages from the count when deciding to show the button', () => {
-      // 23 real messages + 2 event messages = 25 total, but only 23 count
-      const historical = [
-        ...largeSetOfHistoricalMessages.messages.slice(0, 23),
-        { eventType: 'presence' },
-        { eventType: 'typing' },
-      ];
-      render(
-        <Messages
-          {...defaultProps}
-          allHistoryFetched={false}
-        />
-      );
+    test('does not show the button when history is fully fetched', () => {
+      render(<Messages {...defaultProps} allHistoryFetched={true} lastHistoryBatchCount={25} />);
       expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
     });
 
@@ -272,7 +246,7 @@ describe('Messages', () => {
           {...defaultProps}
           allHistoryFetched={false}
           fetchMessageHistory={fetchMessageHistory}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
+          lastHistoryBatchCount={25}
         />
       );
       fireEvent.click(screen.getByTestId('load-more-btn'));

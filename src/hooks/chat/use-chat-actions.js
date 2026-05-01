@@ -19,14 +19,22 @@ import { useFetchMessageHistory } from './use-message-history';
  */
 export function useChatActions(params) {
 
-  const { userInput, setUserInput, setMessages, lastQuickReplyMessageIndex, setIsErrorState } = params;
+  const {
+    userInput,
+    setUserInput,
+    setMessages,
+    lastQuickReplyMessageIndex,
+    setIsErrorState,
+    hasUserSentMessageSinceLastHistoryCompleteRef
+  } = params;
 
   const sendMessageHandlers = useSendMessage({
     userInput,
     setUserInput,
     setMessages,
     lastQuickReplyMessageIndex,
-    setIsErrorState
+    setIsErrorState,
+    hasUserSentMessageSinceLastHistoryCompleteRef
   });
 
   const quickReplyHandlers = useQuickReply({ setIsErrorState });

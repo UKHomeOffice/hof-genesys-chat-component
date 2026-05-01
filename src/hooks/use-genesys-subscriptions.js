@@ -52,6 +52,7 @@ export function useGenesysSubscriptions({
   onlineText,
   mergeChatHistory,
   hasReconnectedRef,
+  hasUserSentMessageSinceLastHistoryCompleteRef,
   setLastHistoryBatchCount
 }) {
 
@@ -149,7 +150,7 @@ export function useGenesysSubscriptions({
         (historicalMessages) => {
 
           // Store original historical message batch size as it was delivered
-          setLastHistoryBatchCount(historicalMessages.messages.length);
+          setLastHistoryBatchCount(historicalMessages?.messages?.length ?? 0);
 
           const mappedMessages = mapHistoricalMessagesToStandardMessageFormat(
             hideHistoricalQuickReplyMessages(historicalMessages.messages)
@@ -157,10 +158,21 @@ export function useGenesysSubscriptions({
 
           mergeChatHistory(mappedMessages);
         },
-        () => setAllHistoryFetched(true)
+        () => {
+          setAllHistoryFetched(true);
+          if (hasUserSentMessageSinceLastHistoryCompleteRef) {
+            hasUserSentMessageSinceLastHistoryCompleteRef.current = false;
+          }
+        }
       );
     }
-  }, [genesysIsReady, mergeChatHistory, setAllHistoryFetched, setLastHistoryBatchCount]);
+  }, [
+    genesysIsReady,
+    hasUserSentMessageSinceLastHistoryCompleteRef,
+    mergeChatHistory,
+    setAllHistoryFetched,
+    setLastHistoryBatchCount
+  ]);
 
   /**
    * Subscribe to session restored events to fetch historical messages.
@@ -171,9 +183,7 @@ export function useGenesysSubscriptions({
   useEffect(() => {
     if (genesysIsReady) {
       genesysService.subscribeToSessionRestored((historicalMessages) => {
-
-        // Store original historical message batch size as it was delivered
-        setLastHistoryBatchCount(historicalMessages.messages.length);
+        setLastHistoryBatchCount(historicalMessages?.messages?.length ?? 0);
 
         /**
          * If page is refreshed this will assign hideContent 

@@ -19,6 +19,7 @@ export function useChatState() {
   
   const hasReconnectedRef = useRef(false);
   const lastMessageRef = useRef(null);
+  const hasUserSentMessageSinceLastHistoryCompleteRef = useRef(false);
 
   return {
     userInput,
@@ -43,6 +44,7 @@ export function useChatState() {
     setIsOffline,
     hasReconnectedRef,
     lastMessageRef,
+    hasUserSentMessageSinceLastHistoryCompleteRef,
     lastHistoryBatchCount,
     setLastHistoryBatchCount
   };
