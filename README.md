@@ -301,10 +301,11 @@ All reactive state lives in `useChatState`. `GenesysChatComponent` destructures 
 | `lastHistoryBatchCount` | `number` | The count of messages in the most recent history batch. Shows "Load more" when `=== 25`. |
 | `hasReconnectedRef` | `Ref<boolean>` | Ref (not state) — tracks whether a WebSocket reconnection occurred. Prevents the session-restored handler from re-applying messages on reconnect. |
 | `lastMessageRef` | `Ref<HTMLElement>` | Ref attached to the last text-bearing message element. Used by `useChatUI` to scroll it into view. |
+| `hasUserSentMessageSinceLastHistoryCompleteRef` | `Ref<boolean>` | Ref (not state) — tracks whether the user has sent a new message since the last `historyComplete` event, allowing short post-send batches to keep the Load More button visible until history is complete. |
 
 ### 4.2 Ref Usage
 
-Two refs are used to coordinate behaviour that must not trigger re-renders.
+Three refs are used to coordinate behaviour that must not trigger re-renders.
 
 #### `hasReconnectedRef`
 
@@ -319,6 +320,13 @@ lastMessageRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
 ```
 
 ...whenever `shouldScrollToLatestMessage` is `true`. Using `block: 'nearest'` ensures only the inner scrollable messages container scrolls, not the host page.
+
+#### `hasUserSentMessageSinceLastHistoryCompleteRef`
+
+This ref is set when the user sends a new message and reset when `MessagingService.historyComplete` fires. It is used by the message list to support a hybrid Load More rule:
+
+- before a new user send: show Load More only when the latest batch count is at least 25
+- after a new user send: keep showing Load More while `allHistoryFetched` is `false`, even if the returned history batch is shorter than 25
 
 ---
 
@@ -349,7 +357,7 @@ Wires all Genesys SDK event subscriptions once `genesysIsReady` is `true`. Each 
 |---|---|---|
 | Messages received | `MessagingService.messagesReceived` | Appends new messages. Hides previous structured content. Adds disconnect banner on `Presence.Disconnect`. Clears typing indicator on outbound human message. |
 | Connection status | `MessagingService.offline` / `reconnected` | Sets `isOffline` flag, appends offline/reconnected banner. Reconnected banner is deferred 10 ms to avoid race with offline banner removal. |
-| History (oldMessages) | `MessagingService.oldMessages` + `historyComplete` | Accumulates historical batches into `historicalMessages`, merges into main messages list. |
+| History (oldMessages) | `MessagingService.oldMessages` + `historyComplete` | Stores the latest batch count, maps and merges historical batches into the main messages list, and clears the post-send history ref when `historyComplete` fires. |
 | Session restored | `MessagingService.restored` | Restores most-recent 25 messages on page refresh. Skipped if `hasReconnectedRef` is `true` to prevent duplication on reconnect. |
 | Agent typing | `MessagingService.typingReceived` + `typingTimeout` | Shows/hides `TypingIndicator`. Shows agent-connected banner exactly once per agent session via `hasShownConnectedBanner` ref. |
 | Errors | `MessagingService.error` | Sets `isErrorState(true)`, surfacing the `errorComponent`. |
@@ -580,7 +588,9 @@ User cancels modal
 ### 7.6 History Load Flow
 
 ```
-"Load more messages" button visible when lastHistoryBatchCount === 25
+"Load more messages" button visible when either:
+  - `lastHistoryBatchCount >= 25`, or
+  - the user has sent a new message since the last `historyComplete`
   └─ onClick → handleFetchMessageHistory()
        └─ genesysService.fetchMessageHistory()
              └─ MessagingService.fetchHistory command
@@ -594,7 +604,9 @@ MessagingService.oldMessages fires (per batch)
          └─ setShouldScrollToLatestMessage(false)
 
 MessagingService.historyComplete fires
-  └─ setAllHistoryFetched(true)  → "Load more" button hidden
+  └─ setAllHistoryFetched(true)
+  └─ hasUserSentMessageSinceLastHistoryCompleteRef.current = false
+  └─ "Load more" button hidden
 ```
 
 !["History Load Flow"](./docs/assets/history-load-flow.png "History Load Flow")
