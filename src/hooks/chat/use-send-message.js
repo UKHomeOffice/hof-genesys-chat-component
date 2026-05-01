@@ -12,7 +12,14 @@ import { hideQuickReplyMessageAtIndex } from '../../utils/quick-replies';
  * @param {function} setIsErrorState - the function callback to update whether an error has occurred 
  * @returns 
  */
-export function useSendMessage({ userInput, setUserInput, lastQuickReplyMessageIndex, setMessages, setIsErrorState }) {
+export function useSendMessage({
+  userInput,
+  setUserInput,
+  lastQuickReplyMessageIndex,
+  setMessages,
+  setIsErrorState,
+  hasUserSentMessageSinceLastHistoryCompleteRef,
+}) {
   const sendToGenesys = useCallback(() => {
     genesysService.sendMessageToGenesys(
       userInput,
@@ -30,6 +37,10 @@ export function useSendMessage({ userInput, setUserInput, lastQuickReplyMessageI
       return;
     }
 
+    if (hasUserSentMessageSinceLastHistoryCompleteRef) {
+      hasUserSentMessageSinceLastHistoryCompleteRef.current = true;
+    }
+
     sendToGenesys();
 
     /*
@@ -44,7 +55,14 @@ export function useSendMessage({ userInput, setUserInput, lastQuickReplyMessageI
     }
 
     setUserInput('');
-  }, [userInput, lastQuickReplyMessageIndex, sendToGenesys, setMessages, setUserInput]);
+  }, [
+    hasUserSentMessageSinceLastHistoryCompleteRef,
+    userInput,
+    lastQuickReplyMessageIndex,
+    sendToGenesys,
+    setMessages,
+    setUserInput
+  ]);
 
   const sendMessage = useCallback(
     (event) => {

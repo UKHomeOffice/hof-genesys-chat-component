@@ -2,11 +2,25 @@ import { resolveMessageComponent } from './delegates/message-registry';
 import LoadMoreMessagesButton from './load-more-messages';
 
 /**
- * We only show the button to load more messages when the last history batch count == 25.
+ * Default behavior: show only when a full batch was loaded.
+ * Post-send behavior: keep showing until history is complete, even if
+ * the returned batch is smaller than the configured page size.
  * @returns {boolean} whether to show the Load More Messages button
  */
-const showLoadMoreMessagesButton = (lastHistoryBatchCount, allHistoryFetched) => {
-  return lastHistoryBatchCount === 25 && !allHistoryFetched;
+const showLoadMoreMessagesButton = (
+  lastHistoryBatchCount,
+  allHistoryFetched,
+  hasUserSentMessageSinceLastHistoryComplete
+) => {
+  if (allHistoryFetched) {
+    return false;
+  }
+
+  if (hasUserSentMessageSinceLastHistoryComplete) {
+    return lastHistoryBatchCount > 0;
+  }
+
+  return lastHistoryBatchCount >= 25;
 };
 
 /**
@@ -35,6 +49,7 @@ export default function Messages({
   serviceName,
   utmParam,
   botMetaDisplay,
+  hasUserSentMessageSinceLastHistoryComplete = false,
   lastHistoryBatchCount
 }) {
   const lastTextIndex = resolveLastTextIndex(messages);
@@ -46,7 +61,11 @@ export default function Messages({
       aria-relevant="additions text"
       aria-label="Chat messages">
       <div className='load-messages-section'>
-        {showLoadMoreMessagesButton(lastHistoryBatchCount, allHistoryFetched) &&
+        {showLoadMoreMessagesButton(
+          lastHistoryBatchCount,
+          allHistoryFetched,
+          hasUserSentMessageSinceLastHistoryComplete
+        ) &&
           <LoadMoreMessagesButton onClick={fetchMessageHistory} />
         }
       </div>

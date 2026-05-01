@@ -439,7 +439,7 @@ describe('Historical messages and load more', () => {
     });
   });
 
-  test('shows the "Load more messages" button when >= 24 historical messages are present', async () => {
+  test('shows the "Load more messages" button when history is not fully fetched', async () => {
     renderComponent();
     expect(
       await screen.findByRole('button', { name: /Load more messages/i })
@@ -493,7 +493,7 @@ describe('Historical messages and load more', () => {
     });
   });
 
-  test('does not show the "Load more messages" button when fewer than 24 historical messages', () => {
+  test('does not show the "Load more messages" button when fewer than 25 historical messages are restored', () => {
     // Override with a small restored set
     genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
       callback(restoredMessages)
