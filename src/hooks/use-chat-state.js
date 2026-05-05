@@ -15,7 +15,6 @@ export function useChatState() {
   const [lastQuickReplyMessageIndex, setLastQuickReplyMessageIndex] = useState(0);
   const [showEndChatModal, setShowEndChatModal] = useState(false);
   const [isOffline, setIsOffline] = useState(false);
-  const [lastHistoryBatchCount, setLastHistoryBatchCount] = useState(0);
   
   const hasReconnectedRef = useRef(false);
   const lastMessageRef = useRef(null);
@@ -42,8 +41,6 @@ export function useChatState() {
     isOffline,
     setIsOffline,
     hasReconnectedRef,
-    lastMessageRef,
-    lastHistoryBatchCount,
-    setLastHistoryBatchCount
+    lastMessageRef
   };
 }

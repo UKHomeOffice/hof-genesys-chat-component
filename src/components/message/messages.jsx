@@ -1,13 +1,5 @@
 import { resolveMessageComponent } from './delegates/message-registry';
-import LoadMoreMessagesButton from './load-more-messages';
-
-/**
- * We only show the button to load more messages when the last history batch count == 25.
- * @returns {boolean} whether to show the Load More Messages button
- */
-const showLoadMoreMessagesButton = (lastHistoryBatchCount, allHistoryFetched) => {
-  return lastHistoryBatchCount === 25 && !allHistoryFetched;
-};
+import { useScrollTopHistoryFetch } from '../../hooks/chat/use-scroll-top-history-fetch';
 
 /**
  * Function to check if the last message contains text. Starting from the
@@ -34,22 +26,23 @@ export default function Messages({
   allHistoryFetched,
   serviceName,
   utmParam,
-  botMetaDisplay,
-  lastHistoryBatchCount
+  botMetaDisplay
 }) {
   const lastTextIndex = resolveLastTextIndex(messages);
+  const { messageContainerRef, handleMessageContainerScroll } = useScrollTopHistoryFetch({
+    messages,
+    fetchMessageHistory,
+    allHistoryFetched,
+  });
 
   return (
     <div className="chat-messages" role="log"
       aria-labelledby="chat-heading"
       aria-live="polite"
       aria-relevant="additions text"
-      aria-label="Chat messages">
-      <div className='load-messages-section'>
-        {showLoadMoreMessagesButton(lastHistoryBatchCount, allHistoryFetched) &&
-          <LoadMoreMessagesButton onClick={fetchMessageHistory} />
-        }
-      </div>
+      aria-label="Chat messages"
+      ref={messageContainerRef}
+      onScroll={handleMessageContainerScroll}>
       {messages.length > 0 && messages.map((message, index) => {
         const MessageComponent = resolveMessageComponent(message);
         if (!MessageComponent) {

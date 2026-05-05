@@ -1,16 +1,45 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { genesysService } from '../../services/genesys-service';
 
 /**
- * Custom hook for fetching message history
- * 
- * @param {function} setIsErrorState - the function callback to set the error state
- * @returns 
+ * Manages history fetch requests and prevents concurrent history calls.
+ *
+ * @param {Object} params - Hook parameters
+ * @param {Function} params.setIsErrorState - Sets the chat error state
+ * @returns {{handleFetchMessageHistory: Function, onHistoryFetchComplete: Function}}
+ * Action callbacks for starting and completing history fetches
  */
 export function useFetchMessageHistory({ setIsErrorState }) {
+  const isFetchingHistoryRef = useRef(false);
+
+  /**
+   * Starts a history fetch when there is no in-flight request.
+   *
+   * @returns {boolean} True when a fetch is started, otherwise false
+   */
   const handleFetchMessageHistory = useCallback(() => {
-    genesysService.fetchMessageHistory(() => setIsErrorState(true));
+    if (isFetchingHistoryRef.current) {
+      return false;
+    }
+
+    isFetchingHistoryRef.current = true;
+    genesysService.fetchMessageHistory(() => {
+      isFetchingHistoryRef.current = false;
+      setIsErrorState(true);
+    });
+
+    return true;
   }, [setIsErrorState]);
 
-  return { handleFetchMessageHistory };
+  /**
+   * Clears the in-flight flag after a history batch is processed.
+   */
+  const onHistoryFetchComplete = useCallback(() => {
+    isFetchingHistoryRef.current = false;
+  }, []);
+
+  return {
+    handleFetchMessageHistory,
+    onHistoryFetchComplete,
+  };
 }

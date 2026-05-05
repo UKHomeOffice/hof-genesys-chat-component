@@ -1,3 +1,9 @@
+## 2026-05-08, Version 0.6.0 (Stable), @gregwolversonHO
+
+### Changed
+
+- The way error fetching works. Rather than rely on a button to 'Load More Messages', the service now uses a scroll based approach to fetching history. When a user scrolls to the top of the messages window, the service will automatically handle fetching history, this will continue until fetching history is complete.  
+
 ## 2026-05-08, Version 0.5.2 (Stable), @anjurajanHO
 
 ### Fixed

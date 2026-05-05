@@ -32,6 +32,7 @@
    - [5.4 useChatActions](#54-usechatactions)
    - [5.5 useErrorState](#55-useerrorstate)
    - [5.6 useSendMessage — Structured Message Handling](#56-usesendmessage--structured-message-handling)
+   - [5.7 useScrollTopHistoryFetch](#57-usescrolltophistoryfetch)
 6. [Message Rendering Pipeline](#6-message-rendering-pipeline)
    - [6.1 Component Resolution](#61-component-resolution)
    - [6.2 Message Component Summary](#62-message-component-summary)
@@ -110,6 +111,7 @@ src/
 │   │   ├── use-quick-reply.js
 │   │   ├── use-end-chat.js
 │   │   └── use-message-history.js
+│   │   └── use-scroll-top-history-fetch.js
 │   └── helpers/
 │       └── agent-banner-logic.js
 ├── components/
@@ -289,16 +291,15 @@ All reactive state lives in `useChatState`. `GenesysChatComponent` destructures 
 |---|---|---|
 | `userInput` | `string` | Controlled value of the textarea. Cleared to `""` after each send. |
 | `messages` | `Message[]` | Live message list — all messages the SDK has delivered this session, plus banner objects. |
-| `historicalMessages` | `Message[]` | Accumulates historical message batches fetched from Genesys. Used for the "Load more" flow. |
+| `historicalMessages` | `Message[]` | Accumulates historical message batches fetched from Genesys. Used for the "fetch history" flow. |
 | `genesysIsReady` | `boolean` | `true` once the SDK has raised `MessagingService.ready` and a conversation exists. Gates all subscription effects. |
-| `allHistoryFetched` | `boolean` | Set `true` on `MessagingService.historyComplete`. Hides the "Load more messages" button. |
+| `allHistoryFetched` | `boolean` | Set `true` on `MessagingService.historyComplete`. Prevents further history fetching requests. |
 | `shouldScrollToLatestMessage` | `boolean` | When `true`, `useChatUI` scrolls `lastMessageRef` into view. Reset after scroll. |
 | `agentIsTyping` | `boolean` | Controls visibility of the `TypingIndicator` component. |
 | `isErrorState` | `boolean` | When `true`, renders `errorComponent` and hides the chat UI. |
 | `lastQuickReplyMessageIndex` | `number` | Index of the last quick reply in the `messages` array. `-1` when none. Used to hide previous quick-reply buttons on send. |
 | `showEndChatModal` | `boolean` | Controls visibility of the `EndChatModal` confirmation dialog. |
 | `isOffline` | `boolean` | When `true`, disables the textarea and Send/End Chat buttons. |
-| `lastHistoryBatchCount` | `number` | The count of messages in the most recent history batch. Shows "Load more" when `=== 25`. |
 | `hasReconnectedRef` | `Ref<boolean>` | Ref (not state) — tracks whether a WebSocket reconnection occurred. Prevents the session-restored handler from re-applying messages on reconnect. |
 | `lastMessageRef` | `Ref<HTMLElement>` | Ref attached to the last text-bearing message element. Used by `useChatUI` to scroll it into view. |
 
@@ -376,7 +377,7 @@ A façade hook that composes the four action sub-hooks and returns a flat API su
 | `handleKeyPress(event)` | `useSendMessage` | Submits on `Enter` (without `Shift`). Allows `Shift+Enter` for new lines. |
 | `handleQuickReply(event, reply)` | `useQuickReply` | Sends the quick-reply payload string directly to Genesys without going through the textarea. |
 | `handleEndChat(event)` | `useEndChat` | Closes the modal, logs the event, calls `clearConversation`, and fires `onChatEnded()`. |
-| `handleFetchMessageHistory()` | `useFetchMessageHistory` | Calls `genesysService.fetchMessageHistory()`. Triggered by the Load More button. |
+| `handleFetchMessageHistory()` | `useFetchMessageHistory` | Calls `genesysService.fetchMessageHistory()`. Triggered user scrolling to top of messages container. |
 
 ### 5.5 useErrorState
 
@@ -390,6 +391,10 @@ A simple custom hook for handling changes to error state, with a specific single
 ### 5.6 useSendMessage — Structured Message Handling
 
 When the user sends a message, if `lastQuickReplyMessageIndex` is not `-1` (i.e. there is a visible quick-reply message), the hook calls `hideQuickReplyMessageAtIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
+
+### 5.7 useScrollTopHistoryFetch
+
+A custom hook for detecting scroll behaviour and determining whether to fetch history based on scroll position. The hook uses `ref`s to track whether the user has scrolled to the top of the message window, if they have, and not all history has been fetched (tracked by state), then it triggers a call to `fetchMessageHistory` which is a supplied function that invokes the `fetchHistory` command via the GenesysService class.  
 
 ---
 
@@ -580,24 +585,23 @@ User cancels modal
 ### 7.6 History Load Flow
 
 ```
-"Load more messages" button visible when lastHistoryBatchCount === 25
-  └─ onClick → handleFetchMessageHistory()
+User scrolls to top of message window
+  └─ useEffect fires to trigger fetch history
        └─ genesysService.fetchMessageHistory()
              └─ MessagingService.fetchHistory command
 
 MessagingService.oldMessages fires (per batch)
-  └─ setLastHistoryBatchCount(batch.messages.length)
-     mapHistoricalMessagesToStandardMessageFormat()
+  └─ mapHistoricalMessagesToStandardMessageFormat()
      setHistoricalMessages(prev → [...prev, ...mappedMessages])
      mergeChatHistory(mappedMessages)
          └─ setMessages(prev → sort([...mappedMessages, ...prev]))
          └─ setShouldScrollToLatestMessage(false)
 
 MessagingService.historyComplete fires
-  └─ setAllHistoryFetched(true)  → "Load more" button hidden
+  └─ setAllHistoryFetched(true)  → Scroll top no longer triggers fetch history
 ```
 
-!["History Load Flow"](./docs/assets/history-load-flow.png "History Load Flow")
+!["Load History Flow"](./docs/assets/load-history-flow.png "Load History Flow")
 
 ---
 
@@ -731,7 +735,6 @@ The ConversationProvider component is a React context provider that makes the cu
 | **Multiple structured messages in sequence** | Only the last structured message in the list shows quick-reply buttons. All others are hidden. Sending a message hides the current one. |
 | **Agent joining mid-conversation** | "Agent connected" banner appears exactly once per agent session (guarded by `hasShownConnectedBanner` ref). Resets on agent disconnect. |
 | **Simultaneous offline + reconnect events** | The 10 ms `setTimeout` on `reconnected` ensures the offline banner state update settles first, avoiding both banners appearing simultaneously. |
-| **History load threshold** | "Load more" button appears when `lastHistoryBatchCount === 25`. Disappears when `historyComplete` fires. The threshold accounts for event-type non-text messages in the batch. |
 | **Character limit enforcement** | Textarea is visually marked as error and Send button is disabled when input length exceeds `maxCharacterLimit`. `onKeyDown` is also blocked to prevent keyboard submission. |
 
 ---

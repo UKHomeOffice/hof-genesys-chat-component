@@ -36,6 +36,7 @@ import { resetAgentBannerState, shouldShowAgentConnectedBanner } from './helpers
  * @param {string} onlineText - Text for online
  * @param {Function} mergeChatHistory - Function to merge history
  * @param {Object} hasReconnectedRef - Ref for reconnection
+ * @param {Function} onHistoryFetchComplete - Callback for history fetch completion
  */
 export function useGenesysSubscriptions({
   genesysIsReady,
@@ -52,7 +53,7 @@ export function useGenesysSubscriptions({
   onlineText,
   mergeChatHistory,
   hasReconnectedRef,
-  setLastHistoryBatchCount
+  onHistoryFetchComplete = () => { }
 }) {
 
   /*
@@ -147,20 +148,25 @@ export function useGenesysSubscriptions({
     if (genesysIsReady) {
       genesysService.subscribeToGenesysOldMessages(
         (historicalMessages) => {
-
-          // Store original historical message batch size as it was delivered
-          setLastHistoryBatchCount(historicalMessages.messages.length);
-
           const mappedMessages = mapHistoricalMessagesToStandardMessageFormat(
             hideHistoricalQuickReplyMessages(historicalMessages.messages)
           );
 
           mergeChatHistory(mappedMessages);
+          onHistoryFetchComplete();
         },
-        () => setAllHistoryFetched(true)
+        () => {
+          setAllHistoryFetched(true);
+          onHistoryFetchComplete();
+        }
       );
     }
-  }, [genesysIsReady, mergeChatHistory, setAllHistoryFetched, setLastHistoryBatchCount]);
+  }, [
+    genesysIsReady,
+    mergeChatHistory,
+    setAllHistoryFetched,
+    onHistoryFetchComplete
+  ]);
 
   /**
    * Subscribe to session restored events to fetch historical messages.
@@ -171,10 +177,6 @@ export function useGenesysSubscriptions({
   useEffect(() => {
     if (genesysIsReady) {
       genesysService.subscribeToSessionRestored((historicalMessages) => {
-
-        // Store original historical message batch size as it was delivered
-        setLastHistoryBatchCount(historicalMessages.messages.length);
-
         /**
          * If page is refreshed this will assign hideContent 
          * property to recieved old messages from Genesys.
@@ -204,7 +206,7 @@ export function useGenesysSubscriptions({
         }
       });
     }
-  }, [genesysIsReady, mergeChatHistory, hasReconnectedRef, setShouldScrollToLatestMessage, setLastHistoryBatchCount]);
+  }, [genesysIsReady, mergeChatHistory, hasReconnectedRef, setShouldScrollToLatestMessage]);
 
   /**
    * Setup agent typing indicator. Create a callback function to pass to the Genesys subcription,

@@ -1655,9 +1655,9 @@ hast-util-whitespace@^3.0.0:
   dependencies:
     "@types/hast" "^3.0.0"
 
-hof-genesys-chat-component@../hof-genesys-chat-component-v0.4.3.tgz:
-  version "0.4.3"
-  resolved "../hof-genesys-chat-component-v0.4.3.tgz#0dfd621bdf2d7689eb898f165be0f2ad3be737de"
+hof-genesys-chat-component@../hof-genesys-chat-component-v0.5.6.tgz:
+  version "0.5.6"
+  resolved "../hof-genesys-chat-component-v0.5.6.tgz#5d0df3e5da0c952f638346e48b633576efe17d27"
   dependencies:
     react-markdown "^10.1.0"
     remark-breaks "^4.0.0"
