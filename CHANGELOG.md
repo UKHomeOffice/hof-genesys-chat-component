@@ -1,3 +1,9 @@
+## 2026-05-06, Version 0.5.1 (Stable), @anjurajanHO
+
+### Added
+
+- Added file to scan for malicious or vulnerable packages using hof-maestro-scanner.
+
 ## 2026-04-17, Version 0.5.0 (Stable), @gregwolversonHO
 
 ### Changed
