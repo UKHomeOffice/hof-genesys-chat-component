@@ -13,7 +13,7 @@
     "@hods/loading-spinner": "^0.5.1",
     "@hods/sass-base": "^0.5.1",
     "govuk-frontend": "^5.11.0",
-    "hof-genesys-chat-component": "../hof-genesys-chat-component-v0.5.0.tgz",
+    "hof-genesys-chat-component": "../hof-genesys-chat-component-v0.5.1.tgz",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router": "^7.7.0"
