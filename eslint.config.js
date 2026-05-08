@@ -10,8 +10,8 @@ export default defineConfig([
     ignores: [      
       '**/node_modules',
       '**/build',
-      '**/dist/**/*.js',
-      '**/coverage/**/*.js',
+      '**/dist/**/*.{js,jsx}',
+      '**/coverage/**/*.{js,jsx}',
       '**/public',
       '*.min.js',
       '*.config.js',
@@ -21,7 +21,7 @@ export default defineConfig([
       "**/*.config.js",
       ".scannerwork/**"
     ],
-    files: ["**/*.js"],
+    files: ["**/*.{js,jsx}"],
     plugins: {
       'react-hooks': reactHooksPlugin,
       'react': reactPlugin,

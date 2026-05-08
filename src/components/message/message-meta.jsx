@@ -1,4 +1,4 @@
-import { formatDate } from "../../utils";
+import { formatDate } from '../../utils';
 
 export default function MessageMetaData({ type, messageTimeStamp, metaDisplay }) {
   const formattedTimestamp = formatDate(messageTimeStamp);

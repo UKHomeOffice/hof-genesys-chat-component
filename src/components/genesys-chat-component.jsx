@@ -26,7 +26,8 @@ import { useErrorState } from '../hooks/use-error-state.js';
  * @param {Function} onChatEnded - Required callback when chat ends
  * @param {object} loadingSpinner - Loading spinner component to display while Genesys is initializing
  * @param {Function} loggingCallback - Callback for logging events (e.g. for analytics)
- * @param {number} maxCharacterLimit - Maximum character limit for user messages (default is 4096, which is the limit for Genesys messages)
+ * @param {number} maxCharacterLimit - Maximum character limit for user messages
+ * (default is 4096, which is the limit for Genesys messages)
  * @param {boolean} debugMode - Flag to enable debug mode on Genesys service for additional logging (default is false)
  * @param {Function} errorCallback - Callback for handling error events
  * @returns {JSX.Element} Genesys Chat Component
