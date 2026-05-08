@@ -8,6 +8,10 @@ import remarkBreaks from 'remark-breaks';
  * Custom renderer for all Markdown <a> elements.
  * Applies GOV.UK link classes, adds target/rel attributes,
  * and appends UTM parameters for non-mailto links.
+ * 
+ * ReactMarkdown provides parser metadata props (node, position) to custom renderers.
+ * We destructure them so they are not forwarded to the DOM when spreading ...rest on <a>.
+ * They are intentionally unused, so no-unused-vars is disabled for this signature only.
  *
  * @param {object} props
  * @param {string} props.href - The hyperlink reference from markdown.
@@ -15,9 +19,6 @@ import remarkBreaks from 'remark-breaks';
  * @param {string} [props.utmParam] - UTM parameters to append.
  * @returns {JSX.Element} - The rendered anchor tag.
  */
-// ReactMarkdown provides parser metadata props (node, position) to custom renderers.
-// We destructure them so they are not forwarded to the DOM when spreading ...rest on <a>.
-// They are intentionally unused, so no-unused-vars is disabled for this signature only.
 // eslint-disable-next-line no-unused-vars
 function renderGovUkLink({ node, position, href = '', children, utmParam, ...rest }) {
   const isEmail = href.startsWith('mailto:');
