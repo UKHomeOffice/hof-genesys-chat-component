@@ -67,7 +67,7 @@ export default function Messages({
             utmParam={utmParam}
             botMetaDisplay={botMetaDisplay}
           />
-        )
+        );
       })}
     </div>
   );

@@ -15,6 +15,10 @@ import remarkBreaks from 'remark-breaks';
  * @param {string} [props.utmParam] - UTM parameters to append.
  * @returns {JSX.Element} - The rendered anchor tag.
  */
+// ReactMarkdown provides parser metadata props (node, position) to custom renderers.
+// We destructure them so they are not forwarded to the DOM when spreading ...rest on <a>.
+// They are intentionally unused, so no-unused-vars is disabled for this signature only.
+// eslint-disable-next-line no-unused-vars
 function renderGovUkLink({ node, position, href = '', children, utmParam, ...rest }) {
   const isEmail = href.startsWith('mailto:');
 
@@ -41,7 +45,7 @@ function renderGovUkLink({ node, position, href = '', children, utmParam, ...res
  * @param {Object} children - Children nodes of the paragraph, passed by ReactMarkdown
  * @param {string} messageType - 'Inbound' or 'Outbound' to determine styling
  * @param {boolean} isWrapped - Whether this paragraph is already wrapped in a message div 
- * @returns 
+ * @returns {JSX.Element} - The rendered paragraph element
  */
 function renderParagraph({ children }, messageType, isWrapped) {
   if (isWrapped) {
@@ -115,7 +119,7 @@ export default function MessageText({ text, type, utmParam }) {
     .replace(/\\/g, '');     // remove remaining backslashes
 
   // Check if cleaned text contains block - level elements
-  const hasBlocks = hasBlockMarkdown(cleanedText)
+  const hasBlocks = hasBlockMarkdown(cleanedText);
 
   const renderedMarkdown = (
     <ReactMarkdown
@@ -129,7 +133,7 @@ export default function MessageText({ text, type, utmParam }) {
     >
       {cleanedText || ''}
     </ReactMarkdown>
-  )
+  );
 
   // If no blocks: return the markdown as-is (ReactMarkdown already wrapped in <p>)
   if (!hasBlocks) {
@@ -139,10 +143,10 @@ export default function MessageText({ text, type, utmParam }) {
   // If block-level content exists: wrap everything in a <div> with message classes
   return (
     <div data-testid="message-root"
-      className={`${type === "Inbound"
-        ? "inbound-message"
-        : "outbound-message"
-        } govuk-body`}
+      className={`${type === 'Inbound'
+        ? 'inbound-message'
+        : 'outbound-message'
+      } govuk-body`}
     >
       {renderedMarkdown}
     </div>

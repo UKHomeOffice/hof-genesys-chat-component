@@ -1,3 +1,9 @@
+## 2026-05-08, Version 0.5.2 (Stable), @anjurajanHO
+
+### Fixed
+
+- Fixed various lint issues previously missed in JSX files and updated lint configuration to include JSX.
+
 ## 2026-05-06, Version 0.5.1 (Stable), @anjurajanHO
 
 ### Added
