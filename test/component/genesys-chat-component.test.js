@@ -31,7 +31,7 @@ jest.mock('../../src/services/genesys-service.js', () => ({
 }));
 
 import '@testing-library/jest-dom';
-import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { genesysService } from '../../src/services/genesys-service.js';
 import GenesysChatComponent from '../../src/components/genesys-chat-component';
@@ -421,10 +421,10 @@ describe('Session restore', () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. Historical messages / load more
+// 5. Historical messages / auto fetch
 // ---------------------------------------------------------------------------
 
-describe('Historical messages and load more', () => {
+describe('Historical messages and auto fetch', () => {
   let onFetchHistory;
   let onHistoryComplete;
 
@@ -439,18 +439,41 @@ describe('Historical messages and load more', () => {
     });
   });
 
-  test('shows the "Load more messages" button when >= 24 historical messages are present', async () => {
+  test('calls fetchMessageHistory when the message window is scrolled to top', async () => {
     renderComponent();
-    expect(
-      await screen.findByRole('button', { name: /Load more messages/i })
-    ).toBeInTheDocument();
+
+    const chatLog = await screen.findByRole('log');
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
+
+    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
   });
 
-  test('calls fetchMessageHistory when the button is clicked', async () => {
+  test('fetches one batch per top-hit until user scrolls away and returns to top', async () => {
     renderComponent();
-    const button = await screen.findByRole('button', { name: /Load more messages/i });
-    await userEvent.click(button);
+
+    const chatLog = await screen.findByRole('log');
+
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
     expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
+
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+
+    act(() => {
+      onFetchHistory({ messages: [] });
+    });
+
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
+    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(2);
   });
 
   test('appends newly fetched historical messages to the list', async () => {
@@ -479,29 +502,27 @@ describe('Historical messages and load more', () => {
     });
   });
 
-  test('hides the "Load more messages" button once all history is fetched', async () => {
+  test('does not fetch again once all history has been fetched', async () => {
     renderComponent();
-    const button = await screen.findByRole('button', { name: /Load more messages/i });
+
+    const chatLog = await screen.findByRole('log');
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
+    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
 
     act(() => {
       onFetchHistory({ messages: [] });
       onHistoryComplete(true);
     });
 
-    await waitFor(() => {
-      expect(button).not.toBeInTheDocument();
-    });
-  });
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
 
-  test('does not show the "Load more messages" button when fewer than 24 historical messages', () => {
-    // Override with a small restored set
-    genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
-      callback(restoredMessages)
-    );
-    renderComponent();
-    expect(
-      screen.queryByRole('button', { name: /Load more messages/i })
-    ).not.toBeInTheDocument();
+    expect(genesysService.fetchMessageHistory).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -1031,8 +1052,11 @@ describe('Error states', () => {
     const componentErrorCallback = jest.fn();
     renderComponent({ errorCallback: componentErrorCallback });
 
-    const btn = await screen.findByRole('button', { name: /Load more messages/i });
-    await userEvent.click(btn);
+    const chatLog = await screen.findByRole('log');
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
 
     act(() => { errorCallback(); });
 
@@ -1103,7 +1127,7 @@ describe('Scroll behaviour', () => {
     );
   });
 
-  test('does not scroll when historical messages are prepended via load more', async () => {
+  test('does not scroll when historical messages are prepended from top-scroll fetch', async () => {
     let onFetchHistory;
 
     genesysService.subscribeToSessionRestored.mockImplementation((callback) =>
@@ -1118,8 +1142,11 @@ describe('Scroll behaviour', () => {
     // Reset the spy after the initial scroll that happens on session restore
     Element.prototype.scrollIntoView.mockClear();
 
-    const btn = await screen.findByRole('button', { name: /Load more messages/i });
-    await userEvent.click(btn);
+    const chatLog = await screen.findByRole('log');
+    chatLog.scrollTop = 50;
+    fireEvent.scroll(chatLog);
+    chatLog.scrollTop = 0;
+    fireEvent.scroll(chatLog);
 
     act(() => {
       onFetchHistory({

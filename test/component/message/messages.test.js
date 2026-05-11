@@ -5,8 +5,6 @@ import Messages from '../../../src/components/message/messages';
 
 import inboundMessages from '../../data/inbound-messages.json';
 import outboundMessages from '../../data/outbound-messages.json';
-import historicalMessages from '../../data/restored-messages.json';
-import largeSetOfHistoricalMessages from '../../data/large-set-restored-messages.json';
 import restoredMessages from '../../data/restored-messages.json';
 
 /*
@@ -31,10 +29,6 @@ jest.mock('../../../src/components/message/types/banner-message', () => ({ messa
   <div data-testid="banner" data-is-last={String(isLast)} ref={isLast ? lastMessageRef : null}>
     {message.text}
   </div>
-));
-
-jest.mock('../../../src/components/message/load-more-messages', () => ({ onClick }) => (
-  <button data-testid="load-more-btn" onClick={onClick}>Load more</button>
 ));
 
 // ---------------------------------------------------------------------------
@@ -211,72 +205,59 @@ describe('Messages', () => {
     });
   });
 
-  describe('Load more messages button', () => {
-    test('does not show the button when historicalMessages is empty', () => {
-      render(<Messages {...defaultProps} historicalMessages={[]} />);
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('does not show the button when fewer than 24 historical messages', () => {
-      render(
-        <Messages
-          {...defaultProps}
-          allHistoryFetched={false}
-        />
-      );
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('shows the button when there are 24 or more historical messages and history is not fully fetched', () => {
-      render(
-        <Messages
-          {...defaultProps}
-          allHistoryFetched={false}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
-        />
-      );
-      expect(screen.getByTestId('load-more-btn')).toBeInTheDocument();
-    });
-
-    test('does not show the button when history is fully fetched, even with 24+ messages', () => {
-      render(
-        <Messages
-          {...defaultProps}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
-          allHistoryFetched={true}
-        />
-      );
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('excludes eventType messages from the count when deciding to show the button', () => {
-      // 23 real messages + 2 event messages = 25 total, but only 23 count
-      const historical = [
-        ...largeSetOfHistoricalMessages.messages.slice(0, 23),
-        { eventType: 'presence' },
-        { eventType: 'typing' },
-      ];
-      render(
-        <Messages
-          {...defaultProps}
-          allHistoryFetched={false}
-        />
-      );
-      expect(screen.queryByTestId('load-more-btn')).not.toBeInTheDocument();
-    });
-
-    test('calls fetchMessageHistory when the button is clicked', () => {
-      const fetchMessageHistory = jest.fn();
+  describe('auto fetch on top scroll', () => {
+    test('calls fetchMessageHistory when the chat container is scrolled to the top', () => {
+      const fetchMessageHistory = jest.fn().mockReturnValue(true);
       render(
         <Messages
           {...defaultProps}
           allHistoryFetched={false}
           fetchMessageHistory={fetchMessageHistory}
-          lastHistoryBatchCount={largeSetOfHistoricalMessages.messages.length}
         />
       );
-      fireEvent.click(screen.getByTestId('load-more-btn'));
+
+      const chatLog = screen.getByRole('log');
+      fireEvent.scroll(chatLog, { target: { scrollTop: 40 } });
+      fireEvent.scroll(chatLog, { target: { scrollTop: 0 } });
       expect(fetchMessageHistory).toHaveBeenCalledTimes(1);
+    });
+
+    test('does not fetch when all history has been fetched', () => {
+      const fetchMessageHistory = jest.fn().mockReturnValue(true);
+      render(
+        <Messages
+          {...defaultProps}
+          allHistoryFetched={true}
+          fetchMessageHistory={fetchMessageHistory}
+        />
+      );
+
+      const chatLog = screen.getByRole('log');
+      fireEvent.scroll(chatLog, { target: { scrollTop: 40 } });
+      fireEvent.scroll(chatLog, { target: { scrollTop: 0 } });
+      expect(fetchMessageHistory).not.toHaveBeenCalled();
+    });
+
+    test('fetches only once per top-hit until user scrolls away and back', () => {
+      const fetchMessageHistory = jest.fn().mockReturnValue(true);
+      render(
+        <Messages
+          {...defaultProps}
+          allHistoryFetched={false}
+          fetchMessageHistory={fetchMessageHistory}
+        />
+      );
+
+      const chatLog = screen.getByRole('log');
+
+      fireEvent.scroll(chatLog, { target: { scrollTop: 40 } });
+      fireEvent.scroll(chatLog, { target: { scrollTop: 0 } });
+      fireEvent.scroll(chatLog, { target: { scrollTop: 0 } });
+      expect(fetchMessageHistory).toHaveBeenCalledTimes(1);
+
+      fireEvent.scroll(chatLog, { target: { scrollTop: 40 } });
+      fireEvent.scroll(chatLog, { target: { scrollTop: 0 } });
+      expect(fetchMessageHistory).toHaveBeenCalledTimes(2);
     });
   });
 });

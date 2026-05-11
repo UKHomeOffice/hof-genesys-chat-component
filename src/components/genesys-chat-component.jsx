@@ -91,9 +91,7 @@ export default function GenesysChatComponent({
     isOffline,
     setIsOffline,
     hasReconnectedRef,
-    lastMessageRef,
-    lastHistoryBatchCount,
-    setLastHistoryBatchCount
+    lastMessageRef
   } = chatState;
 
   useErrorState({ 
@@ -116,6 +114,24 @@ export default function GenesysChatComponent({
     setIsErrorState,
   });
 
+  const {
+    sendMessage,
+    handleKeyPress,
+    handleQuickReply,
+    handleEndChat,
+    handleFetchMessageHistory,
+    onHistoryFetchComplete,
+  } = useChatActions({
+    userInput,
+    setUserInput,
+    setMessages,
+    lastQuickReplyMessageIndex,
+    setShowEndChatModal,
+    setIsErrorState,
+    serviceName: destructuredServiceMetadata.serviceName,
+    onChatEnded
+  });
+
   useGenesysSubscriptions({
     genesysIsReady,
     setMessages,
@@ -131,24 +147,7 @@ export default function GenesysChatComponent({
     onlineText: destructuredServiceMetadata.onlineText,
     mergeChatHistory,
     hasReconnectedRef,
-    setLastHistoryBatchCount
-  });
-
-  const {
-    sendMessage,
-    handleKeyPress,
-    handleQuickReply,
-    handleEndChat,
-    handleFetchMessageHistory,
-  } = useChatActions({
-    userInput,
-    setUserInput,
-    setMessages,
-    lastQuickReplyMessageIndex,
-    setShowEndChatModal,
-    setIsErrorState,
-    serviceName: destructuredServiceMetadata.serviceName,
-    onChatEnded
+    onHistoryFetchComplete
   });
 
   return (
@@ -165,7 +164,6 @@ export default function GenesysChatComponent({
             serviceName={destructuredServiceMetadata.serviceName}
             utmParam={destructuredServiceMetadata.utmParam}
             botMetaDisplay={destructuredServiceMetadata.botMetaDisplay}
-            lastHistoryBatchCount={lastHistoryBatchCount}
           />
           {agentIsTyping && <TypingIndicator isAgentTyping={agentIsTyping} />}
           {showEndChatModal && (

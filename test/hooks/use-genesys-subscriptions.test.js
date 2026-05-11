@@ -73,7 +73,6 @@ describe('useGenesysSubscriptions', () => {
     onlineText: 'Back online',
     mergeChatHistory: jest.fn(),
     hasReconnectedRef: { current: false },
-    setLastHistoryBatchCount: jest.fn(),
     ...overrides,
   });
 
