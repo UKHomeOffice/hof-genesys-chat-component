@@ -10,6 +10,7 @@ import { useGenesysSubscriptions } from '../hooks/use-genesys-subscriptions.js';
 import { useChatActions } from '../hooks/chat/use-chat-actions.js';
 import { useChatUI } from '../hooks/use-chat-ui.js';
 import { useErrorState } from '../hooks/use-error-state.js';
+import { hasVisibleQuickReply } from '../utils/quick-replies.js';
 
 /**
  * A reusable Genesys Chat Component for Home Office services
@@ -132,6 +133,8 @@ export default function GenesysChatComponent({
     onChatEnded
   });
 
+  const isQuickReplyActive = hasVisibleQuickReply(messages);
+
   useGenesysSubscriptions({
     genesysIsReady,
     setMessages,
@@ -182,6 +185,7 @@ export default function GenesysChatComponent({
             genesysIsReady={genesysIsReady}
             showEndChatModal={() => setShowEndChatModal(true)}
             isOffline={isOffline}
+            isQuickReplyActive={isQuickReplyActive}
             maxCharacterLimit={maxCharacterLimit}
           />
         </>
