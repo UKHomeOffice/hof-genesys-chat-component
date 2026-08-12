@@ -10,6 +10,7 @@ import { useGenesysSubscriptions } from '../hooks/use-genesys-subscriptions.js';
 import { useChatActions } from '../hooks/chat/use-chat-actions.js';
 import { useChatUI } from '../hooks/use-chat-ui.js';
 import { useErrorState } from '../hooks/use-error-state.js';
+import { hasVisibleQuickReply } from '../utils/quick-replies.js';
 
 /**
  * A reusable Genesys Chat Component for Home Office services
@@ -56,6 +57,7 @@ export default function GenesysChatComponent({
     onlineText: serviceMetadata.onlineText || 'You are back online.',
     utmParam: serviceMetadata.utmParams || '',
     botMetaDisplay: serviceMetadata.botMetaDisplay || 'Digital assistant',
+    isTextMessageSendingOnQuickReplyDisabled: serviceMetadata.isTextMessageSendingOnQuickReplyDisabled || false,
   }), [serviceMetadata]);
 
   /**
@@ -132,6 +134,10 @@ export default function GenesysChatComponent({
     onChatEnded
   });
 
+  const isTextSendingDisabledByQuickReply =
+    hasVisibleQuickReply(messages) &&
+    destructuredServiceMetadata.isTextMessageSendingOnQuickReplyDisabled;
+
   useGenesysSubscriptions({
     genesysIsReady,
     setMessages,
@@ -182,6 +188,7 @@ export default function GenesysChatComponent({
             genesysIsReady={genesysIsReady}
             showEndChatModal={() => setShowEndChatModal(true)}
             isOffline={isOffline}
+            isTextSendingDisabledByQuickReply={isTextSendingDisabledByQuickReply}
             maxCharacterLimit={maxCharacterLimit}
           />
         </>

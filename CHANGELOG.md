@@ -1,3 +1,9 @@
+## 2026-08-12, Version 0.7.0 (Stable), @nzorba
+
+### Added
+
+- Feature to disable message sending on quick replies depending on the flag isTextMessageSendingOnQuickReplyDisabled, which will be passed to services and set depending on whether the service uses this feature. 
+
 ## 2026-05-08, Version 0.6.0 (Stable), @gregwolversonHO
 
 ### Changed

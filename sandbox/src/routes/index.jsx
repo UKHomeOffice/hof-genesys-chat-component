@@ -29,6 +29,7 @@ export default function Sandbox() {
             offlineText: appConfig.bannerTypeDisplay.offline,
             onlineText: appConfig.bannerTypeDisplay.online,
             botMetaDisplay: appConfig.sandbox.botMetaDisplay,
+            isTextMessageSendingOnQuickReplyDisabled: appConfig.sandbox.isTextMessageSendingOnQuickReplyDisabled,
           }}
           onChatEnded={() => navigate("/end-chat-confirmation")}
           loggingCallback={logData}
