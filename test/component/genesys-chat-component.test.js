@@ -695,7 +695,7 @@ describe('Quick replies (structured messages)', () => {
     renderComponent({
       serviceMetadata: {
         ...SERVICE_METADATA,
-        isTextMessageSendingOnQuickReplyDisabled: false,
+        disableTextMessageSendingOnQuickReply: false,
       }
     });
 
@@ -713,7 +713,7 @@ describe('Quick replies (structured messages)', () => {
     renderComponent({
       serviceMetadata: {
         ...SERVICE_METADATA,
-        isTextMessageSendingOnQuickReplyDisabled: true,
+        disableTextMessageSendingOnQuickReply: true,
       }
     });
 

@@ -57,7 +57,7 @@ export default function GenesysChatComponent({
     onlineText: serviceMetadata.onlineText || 'You are back online.',
     utmParam: serviceMetadata.utmParams || '',
     botMetaDisplay: serviceMetadata.botMetaDisplay || 'Digital assistant',
-    isTextMessageSendingOnQuickReplyDisabled: serviceMetadata.isTextMessageSendingOnQuickReplyDisabled || false,
+    disableTextMessageSendingOnQuickReply: serviceMetadata.disableTextMessageSendingOnQuickReply || false,
   }), [serviceMetadata]);
 
   /**
@@ -136,7 +136,7 @@ export default function GenesysChatComponent({
 
   const isTextSendingDisabledByQuickReply =
     hasVisibleQuickReply(messages) &&
-    destructuredServiceMetadata.isTextMessageSendingOnQuickReplyDisabled;
+    destructuredServiceMetadata.disableTextMessageSendingOnQuickReply;
 
   useGenesysSubscriptions({
     genesysIsReady,

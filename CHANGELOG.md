@@ -2,7 +2,9 @@
 
 ### Added
 
-- Feature to disable message sending on quick replies depending on the flag isTextMessageSendingOnQuickReplyDisabled, which will be passed to services and set depending on whether the service uses this feature. 
+- Feature to disable message text box and send button on quick replies based on two conditions:
+1. disableTextMessageSendingOnQuickReply flag from service which is set depending on whether service uses this feature
+2. contentType of message is set to 'QuickReply'
 
 ## 2026-05-08, Version 0.6.0 (Stable), @gregwolversonHO
 
