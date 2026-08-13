@@ -7,9 +7,11 @@ export default function ChatForm({
   handleKeyPress,
   showEndChatModal,
   isOffline,
+  isTextSendingDisabledByQuickReply,
   maxCharacterLimit
 }) {
   const isDisable = inputMessage.length > maxCharacterLimit;
+  const isTextMessageSendingDisabled = isOffline || isTextSendingDisabledByQuickReply;
 
   const handleEndChat = (event) => {
     event.preventDefault();
@@ -41,7 +43,7 @@ export default function ChatForm({
             className={`govuk-textarea ${isDisable ? 'govuk-textarea--error' : null}`}
             rows="5"
             maxLength={maxCharacterLimit}
-            disabled={isOffline}
+            disabled={isTextMessageSendingDisabled}
           />
         </div>
 
@@ -62,7 +64,7 @@ export default function ChatForm({
             id="send-button"
             className="govuk-button"
             onClick={(event) => sendMessage(event)}
-            disabled={isDisable || isOffline}>
+            disabled={isDisable || isTextMessageSendingDisabled}>
             Send
           </button>
         </div>

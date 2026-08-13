@@ -1,8 +1,15 @@
-// Common predicate for identifying a structured outbound message with content
+const hasQuickReplyContent = (content) =>
+  Array.isArray(content) &&
+  content.some((item) => item?.contentType === 'QuickReply');
+
+// Common predicate for identifying a structured outbound quick reply message
 const isQuickReply = (msg) =>
   msg?.direction === 'Outbound' &&
   msg?.type === 'Structured' &&
-  Boolean(msg?.content);
+  hasQuickReplyContent(msg?.content);
+
+const hasVisibleQuickReply = (messages) =>
+  messages.some((message) => isQuickReply(message) && !message?.hideContent);
 
 // Set hideContent on ALL quick reply buttons
 const setHideContentPropertyOnAllQuickReplies = (messages, boolValue) =>
@@ -56,6 +63,7 @@ const hideHistoricalQuickReplyMessages = (messages) => {
 
 export {
   getQuickReplyIndex,
+  hasVisibleQuickReply,
   setHideContentPropertyOnAllQuickReplies,
   hideQuickReplyMessageAtIndex,
   hidePreviousQuickReplyMessages,

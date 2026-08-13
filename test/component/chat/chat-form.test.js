@@ -95,6 +95,38 @@ describe('ChatForm component', () => {
     expect(messageInput).toBeDisabled();
   });
 
+  test('does not disable the message box and send button for quick replies unless disable by quick reply flag is false', () => {
+    render(
+      <ChatForm
+        inputMessage="Testing"
+        setInputMessage={() => { }}
+        sendMessage={sendMessage}
+        handleKeyPress={handleKeyPress}
+        isTextSendingDisabledByQuickReply={false}
+        maxCharacterLimit={4096}
+      />
+    );
+
+    expect(screen.getByTestId('message-input')).not.toBeDisabled();
+    expect(screen.getByTestId('send-message-button')).not.toBeDisabled();
+  });
+
+  test('disables the message box and send button for quick replies when disable by quick reply flag is true', () => {
+    render(
+      <ChatForm
+        inputMessage="Testing"
+        setInputMessage={() => { }}
+        sendMessage={sendMessage}
+        handleKeyPress={handleKeyPress}
+        isTextSendingDisabledByQuickReply={true}
+        maxCharacterLimit={4096}
+      />
+    );
+
+    expect(screen.getByTestId('message-input')).toBeDisabled();
+    expect(screen.getByTestId('send-message-button')).toBeDisabled();
+  });
+
   test('prevents sendMessage when character limit is exceeded', async () => {
     const longMessage = 'A'.repeat(4097);
 

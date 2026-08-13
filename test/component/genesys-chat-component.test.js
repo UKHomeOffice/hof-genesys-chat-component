@@ -686,6 +686,42 @@ describe('Quick replies (structured messages)', () => {
       expect(screen.queryByRole('button', { name: /yes/i })).not.toBeInTheDocument();
     });
   });
+
+  test('keeps message box and send button enabled for visible quick replies when disable by quick reply flag is false', async () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+
+    renderComponent({
+      serviceMetadata: {
+        ...SERVICE_METADATA,
+        disableTextMessageSendingOnQuickReply: false,
+      }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).not.toBeDisabled();
+      expect(screen.getByTestId('send-message-button')).not.toBeDisabled();
+    });
+  });
+
+  test('disables message box and send button for visible quick replies when disable by quick reply flag is true', async () => {
+    genesysService.subscribeToGenesysMessages.mockImplementation((callback) =>
+      callback([structuredMessages[2]])
+    );
+
+    renderComponent({
+      serviceMetadata: {
+        ...SERVICE_METADATA,
+        disableTextMessageSendingOnQuickReply: true,
+      }
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('message-input')).toBeDisabled();
+      expect(screen.getByTestId('send-message-button')).toBeDisabled();
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

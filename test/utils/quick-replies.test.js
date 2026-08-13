@@ -1,4 +1,5 @@
 import {
+  hasVisibleQuickReply,
   setHideContentPropertyOnAllQuickReplies,
   getQuickReplyIndex,
   hideQuickReplyMessageAtIndex,
@@ -10,9 +11,26 @@ const newMessage = require('../data/structured-messages.json');
 const historicalMessage = require('../data/restored-messages.json');
 
 const messages = [
-  { direction: 'Inbound', type: 'Text', },
-  { direction: 'Outbound', type: 'Structured', content: [] },
-  { direction: 'Outbound', type: 'Structured', content: [] }
+  { direction: 'Inbound', type: 'Text' },
+  {
+    direction: 'Outbound',
+    type: 'Structured',
+    content: [{ contentType: 'QuickReply' }]
+  },
+  {
+    direction: 'Outbound',
+    type: 'Structured',
+    content: [{ contentType: 'QuickReply' }]
+  }
+];
+
+const messagesWithoutQuickReplies = [
+  { direction: 'Inbound', type: 'Text' },
+  {
+    direction: 'Outbound',
+    type: 'Structured',
+    content: [{ contentType: 'Text' }]
+  }
 ];
 
 describe('setHideContentPropertyOnAllQuickReplies', () => {
@@ -37,6 +55,21 @@ describe('setHideContentPropertyOnAllQuickReplies', () => {
   it('should be undefined ', () => {
     const result = setHideContentPropertyOnAllQuickReplies(newMessageOutbound);
     expect(result.content).toBeUndefined();
+  });
+});
+
+describe('hasVisibleQuickReply', () => {
+  it('returns true when a quick reply message is visible', () => {
+    expect(hasVisibleQuickReply(messages)).toBe(true);
+  });
+
+  it('returns false when quick replies are hidden', () => {
+    const hiddenMessages = hidePreviousQuickReplyMessages(messages);
+    expect(hasVisibleQuickReply(hiddenMessages)).toBe(false);
+  });
+
+  it('returns false when no quick reply content exists', () => {
+    expect(hasVisibleQuickReply(messagesWithoutQuickReplies)).toBe(false);
   });
 });
 

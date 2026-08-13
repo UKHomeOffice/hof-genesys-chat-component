@@ -15,6 +15,7 @@ export default {
     serviceName: 'Sandbox',
     serviceSubText: 'sandbox.',
     errorContactLink: '#',
-    gaUtmParam: ''
+    gaUtmParam: '',
+    disableTextMessageSendingOnQuickReply: false
   }
 }
