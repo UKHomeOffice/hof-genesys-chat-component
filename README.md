@@ -254,6 +254,7 @@ The library tracks whether a Genesys conversation is active using a Genesys mana
 | `onlineText` | `string` | `"You are back online."` | Banner text appended when WebSocket reconnects. |
 | `utmParams` | `string` | `""` | UTM parameter string appended to links rendered inside messages (for analytics link tracking). |
 | `botMetaDisplay` | `string` | `"Digital assistant"` | Display name shown below outbound bot messages in the meta line. |
+| `disableTextMessageSendingOnQuickReply` | `boolean` | When `true` the message text box and send button are disabled on quick replies |
 
 ### 3.4 Minimal Usage Example
 
