@@ -254,7 +254,7 @@ The library tracks whether a Genesys conversation is active using a Genesys mana
 | `onlineText` | `string` | `"You are back online."` | Banner text appended when WebSocket reconnects. |
 | `utmParams` | `string` | `""` | UTM parameter string appended to links rendered inside messages (for analytics link tracking). |
 | `botMetaDisplay` | `string` | `"Digital assistant"` | Display name shown below outbound bot messages in the meta line. |
-| `disableTextMessageSendingOnQuickReply` | `boolean` | When `true` the message text box and send button are disabled on quick replies |
+| `disableTextMessageSendingOnQuickReply` | `boolean` | `false` | When `true` the message text box and send button are disabled on quick replies |
 
 ### 3.4 Minimal Usage Example
 
@@ -270,6 +270,7 @@ export default function ChatPage() {
         serviceName: "my-service",
         agentConnectedText: "An adviser has joined the chat.",
         botMetaDisplay: "Help assistant",
+        disableTextMessageSendingOnQuickReply: false,
       }}
       onChatEnded={() => navigate("/chat-ended")}
       loggingCallback={(log) => analyticsService.log(log)}
@@ -392,6 +393,8 @@ A simple custom hook for handling changes to error state, with a specific single
 ### 5.6 useSendMessage — Structured Message Handling
 
 When the user sends a message, if `lastQuickReplyMessageIndex` is not `-1` (i.e. there is a visible quick-reply message), the hook calls `hideQuickReplyMessageAtIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
+
+If a service enables `disableTextMessageSendingOnQuickReply`, the message text box and Send button are also disabled while visible quick-reply messages remain on screen. 
 
 ### 5.7 useScrollTopHistoryFetch
 
@@ -634,6 +637,7 @@ Banners are synthetic message objects injected into the `messages` array to comm
 | Function | Description |
 |---|---|
 | `setHideContentPropertyOnAllQuickReplies(messages, bool)` | Maps over messages and sets `hideContent` on all quick reply messages. |
+| `hasVisibleQuickReply(messages)` | Returns `true` when a quick reply message with `contentType: 'QuickReply'` is present and `hideContent` is not `true`. |
 | `getQuickReplyIndex(messages)` | Returns the index of the last structured outbound message, or `-1`. |
 | `hideQuickReplyMessageAtIndex(index, messages, bool)` | Sets `hideContent` on the message at a specific index only. |
 | `hidePreviousQuickReplyMessages(messages)` | Mutates (for performance) all structured messages in the existing array to `hideContent: true` before new messages are appended. |
