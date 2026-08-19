@@ -1,3 +1,10 @@
+## 2026-08-19, Version 0.7.1 (Stable), @nzorba
+
+### Changed
+
+- Updated README to include disableTextMessageSendingOnQuickReply in serviceMetadata
+
+
 ## 2026-08-12, Version 0.7.0 (Stable), @nzorba
 
 ### Added

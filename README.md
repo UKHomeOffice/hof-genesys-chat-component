@@ -254,6 +254,7 @@ The library tracks whether a Genesys conversation is active using a Genesys mana
 | `onlineText` | `string` | `"You are back online."` | Banner text appended when WebSocket reconnects. |
 | `utmParams` | `string` | `""` | UTM parameter string appended to links rendered inside messages (for analytics link tracking). |
 | `botMetaDisplay` | `string` | `"Digital assistant"` | Display name shown below outbound bot messages in the meta line. |
+| `disableTextMessageSendingOnQuickReply` | `boolean` | `false` | When `true` the message text box and send button are disabled on quick replies |
 
 ### 3.4 Minimal Usage Example
 
@@ -391,6 +392,8 @@ A simple custom hook for handling changes to error state, with a specific single
 ### 5.6 useSendMessage — Structured Message Handling
 
 When the user sends a message, if `lastQuickReplyMessageIndex` is not `-1` (i.e. there is a visible quick-reply message), the hook calls `hideQuickReplyMessageAtIndex` to hide that message's buttons. This prevents stale quick-reply options from remaining visible after the user has acted.
+
+If a service enables `disableTextMessageSendingOnQuickReply`, the message text box and Send button are also disabled while visible quick-reply messages remain on screen. 
 
 ### 5.7 useScrollTopHistoryFetch
 
@@ -633,6 +636,7 @@ Banners are synthetic message objects injected into the `messages` array to comm
 | Function | Description |
 |---|---|
 | `setHideContentPropertyOnAllQuickReplies(messages, bool)` | Maps over messages and sets `hideContent` on all quick reply messages. |
+| `hasVisibleQuickReply(messages)` | Returns `true` when a quick reply message with `contentType: 'QuickReply'` is present and `hideContent` is not `true`. |
 | `getQuickReplyIndex(messages)` | Returns the index of the last structured outbound message, or `-1`. |
 | `hideQuickReplyMessageAtIndex(index, messages, bool)` | Sets `hideContent` on the message at a specific index only. |
 | `hidePreviousQuickReplyMessages(messages)` | Mutates (for performance) all structured messages in the existing array to `hideContent: true` before new messages are appended. |
@@ -733,6 +737,7 @@ The ConversationProvider component is a React context provider that makes the cu
 | **Network drop mid-conversation** | `isOffline` is set, form is disabled, offline banner appended. On reconnect, banner is replaced (not doubled) after a 10 ms defer. |
 | **WebSocket reconnect duplicating messages** | `MessagingService.restored` fires after reconnect. `hasReconnectedRef` guards against re-applying messages already in state. |
 | **Multiple structured messages in sequence** | Only the last structured message in the list shows quick-reply buttons. All others are hidden. Sending a message hides the current one. |
+| **Text sending disabled for quick replies** | When `serviceMetadata.disableTextMessageSendingOnQuickReply` is `true` and a visible quick reply exists, the textarea and Send button are disabled. Selecting a quick-reply button remains available. |
 | **Agent joining mid-conversation** | "Agent connected" banner appears exactly once per agent session (guarded by `hasShownConnectedBanner` ref). Resets on agent disconnect. |
 | **Simultaneous offline + reconnect events** | The 10 ms `setTimeout` on `reconnected` ensures the offline banner state update settles first, avoiding both banners appearing simultaneously. |
 | **Character limit enforcement** | Textarea is visually marked as error and Send button is disabled when input length exceeds `maxCharacterLimit`. `onKeyDown` is also blocked to prevent keyboard submission. |
