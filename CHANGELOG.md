@@ -1,4 +1,4 @@
-## 2026-08-17, Version 0.7.1 (Stable), @nzorba
+## 2026-08-19, Version 0.7.1 (Stable), @nzorba
 
 ### Changed
 

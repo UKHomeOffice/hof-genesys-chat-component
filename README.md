@@ -270,7 +270,6 @@ export default function ChatPage() {
         serviceName: "my-service",
         agentConnectedText: "An adviser has joined the chat.",
         botMetaDisplay: "Help assistant",
-        disableTextMessageSendingOnQuickReply: false,
       }}
       onChatEnded={() => navigate("/chat-ended")}
       loggingCallback={(log) => analyticsService.log(log)}
@@ -738,6 +737,7 @@ The ConversationProvider component is a React context provider that makes the cu
 | **Network drop mid-conversation** | `isOffline` is set, form is disabled, offline banner appended. On reconnect, banner is replaced (not doubled) after a 10 ms defer. |
 | **WebSocket reconnect duplicating messages** | `MessagingService.restored` fires after reconnect. `hasReconnectedRef` guards against re-applying messages already in state. |
 | **Multiple structured messages in sequence** | Only the last structured message in the list shows quick-reply buttons. All others are hidden. Sending a message hides the current one. |
+| **Text sending disabled for quick replies** | When `serviceMetadata.disableTextMessageSendingOnQuickReply` is `true` and a visible quick reply exists, the textarea and Send button are disabled. Selecting a quick-reply button remains available. |
 | **Agent joining mid-conversation** | "Agent connected" banner appears exactly once per agent session (guarded by `hasShownConnectedBanner` ref). Resets on agent disconnect. |
 | **Simultaneous offline + reconnect events** | The 10 ms `setTimeout` on `reconnected` ensures the offline banner state update settles first, avoiding both banners appearing simultaneously. |
 | **Character limit enforcement** | Textarea is visually marked as error and Send button is disabled when input length exceeds `maxCharacterLimit`. `onKeyDown` is also blocked to prevent keyboard submission. |
