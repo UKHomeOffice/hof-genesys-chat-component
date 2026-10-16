@@ -1,4 +1,4 @@
-# This workflow will lint and run tests using node and then create a git tag depending on the commit message. The tag will then trigger the Automate_Publish workflow to publish a package to GitHub Packages when a release is created
+# Lint, test and scan before tagging. Successful main runs trigger Automate_Publish.
 # For more information see: https://help.github.com/actions/language-and-framework-guides/publishing-nodejs-packages
 name: Automate_Tag
 on: [push]
@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-22.04
     strategy:
       matrix:
-        node-version: [20.x, 22.x, 24.x]
+        node-version: [22.x, 24.x]
     steps:
       - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
@@ -20,13 +20,68 @@ jobs:
         with:
           cmd: install --frozen-lockfile
       - run: yarn lint
-      - run: yarn test    
+      - run: yarn test
+      # Restore with the Sonar job once server connectivity is resolved.
+      # - name: Upload coverage for Sonar
+      #   if: matrix.node-version == '24.x'
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: sonar-coverage
+      #     path: coverage/lcov.info
+      #     if-no-files-found: error
+
+  trivy:
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan dependency vulnerabilities
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          severity: MEDIUM,HIGH,CRITICAL
+          exit-code: '1'
+          ignore-unfixed: false
+          skip-dirs: node_modules,sandbox/node_modules,.git,coverage,dist
+
+  # Temporarily disabled pending the team's Sonar connectivity ticket.
+  # Restore this job, coverage upload and sonar in all tagging needs lists together.
+  # sonar:
+  #   needs: test
+  #   runs-on: ubuntu-22.04
+  #   permissions:
+  #     contents: read
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #       with:
+  #         fetch-depth: 0
+  #     - uses: actions/download-artifact@v4
+  #       with:
+  #         name: sonar-coverage
+  #         path: coverage
+  #     - name: Check Sonar configuration
+  #       env:
+  #         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #       run: |
+  #         test -n "$SONAR_HOST_URL" || { echo "::error::Missing SONAR_HOST_URL secret"; exit 1; }
+  #         test -n "$SONAR_TOKEN" || { echo "::error::Missing SONAR_TOKEN secret"; exit 1; }
+  #     - name: Scan code and wait for the quality gate
+  #       uses: SonarSource/sonarqube-scan-action@v8.3.0
+  #       env:
+  #         SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+  #         SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  #       with:
+  #         args: -Dsonar.qualitygate.wait=true
 
   auto-tag-patch:
-    needs: test
+    needs: [test, trivy]
     runs-on: ubuntu-22.04
     if: |
-      startsWith(github.ref, 'refs/heads/main') &&
+      github.ref == 'refs/heads/main' &&
       !contains(github.event.head_commit.message, '[MAJOR]') &&
       !contains(github.event.head_commit.message, '[MINOR]')
     steps:
@@ -42,10 +97,10 @@ jobs:
       - run: yarn postversion:ci
 
   auto-tag-minor:
-    needs: test
+    needs: [test, trivy]
     runs-on: ubuntu-22.04
     if: |
-      startsWith(github.ref, 'refs/heads/main') &&
+      github.ref == 'refs/heads/main' &&
       !contains(github.event.head_commit.message, '[MAJOR]') &&
       contains(github.event.head_commit.message, '[MINOR]')
     steps:
@@ -61,10 +116,10 @@ jobs:
       - run: yarn postversion:ci
 
   auto-tag-major:
-    needs: test
+    needs: [test, trivy]
     runs-on: ubuntu-22.04
     if: |
-      startsWith(github.ref, 'refs/heads/main') &&
+      github.ref == 'refs/heads/main' &&
       contains(github.event.head_commit.message, '[MAJOR]') &&
       !contains(github.event.head_commit.message, '[MINOR]')
     steps:
@@ -78,3 +133,5 @@ jobs:
           git config --local user.name "$(git log --format='%an' HEAD^!)"
           yarn version --major --git-tag-version
       - run: yarn postversion:ci
+
+      
