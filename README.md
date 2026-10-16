@@ -794,6 +794,13 @@ Rollup processes `src/index.js` through four plugins in order:
 
 `react` and `react-dom` are marked as both `peerDependencies` and `external` in the Rollup config. They are never bundled — the consuming service is expected to provide them. This keeps the bundle small and avoids duplicate React instances.
 
+Development uses React 19.3 while the React peer ranges remain compatible with
+19.1 and later 19.x consumers. Development tooling uses Babel 8 and jest-dom 7
+on current Node.js 22 and 24 releases; Node.js 20 is no longer supported.
+ESLint stays on 9.x because the React, import and accessibility plugins do not
+yet support ESLint 10. The Jest Babel configuration targets the executing Node.js
+version rather than transpiling tests for older browsers.
+
 ### Other scripts
 
 | Script | Description |
@@ -801,6 +808,24 @@ Rollup processes `src/index.js` through four plugins in order:
 | `yarn test` | Runs Jest with coverage. `TZ=UTC` is set to ensure consistent timestamp handling across environments. |
 | `yarn run lint` | Runs ESLint across `src/`. |
 | `yarn run lint:fix` | Runs ESLint with auto-fix. |
+
+### Release checks
+
+The `Automate_Tag` workflow runs lint and tests on Node.js 22 and 24 and
+scans repository dependencies with Trivy. Trivy fails on MEDIUM, HIGH or CRITICAL
+vulnerabilities, including unfixed vulnerabilities. These checks must succeed
+before a version tag is created on `main`.
+
+Sonar scanning, coverage upload and its release gate are temporarily commented
+out pending the team's server connectivity ticket. Restore all three together
+once connectivity is resolved.
+
+Configure the GitHub Actions secrets `SONAR_HOST_URL` and `SONAR_TOKEN` for the
+SonarQube project defined in `sonar-project.properties`. The server must be
+reachable from the runner. Once re-enabled, missing secrets or a failed
+server-side quality gate will fail the Sonar job.
+The `Automate_Publish` workflow only publishes after a successful
+`Automate_Tag` push run on `main`; failed validation does not trigger publishing.
 
 
 
